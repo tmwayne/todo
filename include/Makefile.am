@@ -1,5 +1,4 @@
-noinst_HEADERS = argparse.h \
-	error-functions.h \
+noinst_HEADERS = error-functions.h \
 	helpers.h \
 	minunit.h \
 	todo.h

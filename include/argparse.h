@@ -20,10 +20,7 @@ const char *argp_program_version = "todo v0.1\n"
 const char *argp_program_bug_address = "<tylerwayne3@gmail.com>";
 
 struct arguments {
-  char *path;
-  int col_width;
-  char delim;
-  int headers;
+  char *command;
 };
 
 static struct argp_option options[] = {
@@ -39,15 +36,13 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 
     // Position args
     case ARGP_KEY_ARG:
-      // Too many arguments
-      if (state->arg_num > 1) argp_usage(state);
-      // arguments->args[state->arg_num] = arg;
-      arguments->path = arg;
+      if (state->arg_num > 1) argp_usage(state); // too many arguments
+      arguments->command = arg;
       break;
 
     case ARGP_KEY_END: 
-      // Not enough arguments
-      // if (state->arg_num < 1) argp_usage(state); 
+      if (state->arg_num < 1) 
+        arguments->command = strdup("view"); // default action
       break;
 
     default: 

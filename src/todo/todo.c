@@ -18,24 +18,74 @@
 // limitations under the License.
 //
 
-#include <stdio.h>    // fprintf
-#include <stdlib.h>   // exit, EXIT_FAILURE
-#include "argparse.h" // arguments, argp_parse
+#include <stdio.h>           // fprintf
+#include <stdlib.h>          // exit, EXIT_SUCCESS, EXIT_FAILURE
+#include <string.h>          // strcmp
+#include <getopt.h>          // getopt_long
+#include "error-functions.h" // fatal
+#include "helpers.h"         // hello
 #include "todo.h"
-#include "helpers.h"  // hello
+
+const char *USAGE = "Usage: %s [OPTIONS...] COMMAND\n";
+
+const char *VERSION = "todo v0.1\n"
+  "Copyright (c) 2022 Tyler Wayne\n"
+  "Licensed under the Apache License, Version 2.0\n"
+  "\n"
+  "Written by Tyler Wayne.\n";
+
+const char *HELP = "Usage: %s [OPTIONS...] COMMAND\n"
+  "Just do it...\n"
+  "\n"
+  "Options:\n"
+  "  -h, --help                Print this help\n"
+  "  -v, --version             Print version info\n";
 
 int 
 main(int argc, char **argv)
 {
 
-  // TODO: setup configparse
+  int option_index = 0;
+  struct option longopts[] = {
+    {"version",   no_argument,  0,  'V' },
+    {"help",      no_argument,  0,  'h' },
+    {0}
+  };
 
-  // Default arguments
-  struct arguments arguments;
+  while (1) {
 
-  // Command line arguments
-  argp_parse(&argp, argc, argv, 0, 0, &arguments);
+    int opt = getopt_long(argc, argv, "hV", longopts, &option_index);
 
-  hello();
+    if (opt == -1) break;
+
+    switch (opt) {
+    /*
+    case 0:
+      if (longopts[option_index].flag) break;
+      break;
+    */
+
+    case 'h':
+      printf(HELP, argv[0]);
+      exit(EXIT_SUCCESS);
+
+    case 'V':
+      printf(VERSION);
+      exit(EXIT_SUCCESS);
+
+    case '?':
+    case ':': // unrecognized argument
+      usageErr("Try '%s --help' for more information.\n", argv[0]);
+    
+    default: 
+      break;
+    }
+  }
+
+  if (optind >= argc) usageErr(USAGE, argv[0]);
+
+  printf("todo: %s\n", argv[optind]);
+
+  exit(EXIT_SUCCESS);
 
 }
