@@ -70,7 +70,7 @@ main(int argc, char **argv)
       exit(EXIT_SUCCESS);
 
     case 'V':
-      printf(VERSION);
+      printf("%s", VERSION);
       exit(EXIT_SUCCESS);
 
     case '?':
