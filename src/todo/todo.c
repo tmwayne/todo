@@ -24,7 +24,9 @@
 #include "todo.h"
 #include "helpers.h"  // hello
 
-int main(int argc, char **argv) {
+int 
+main(int argc, char **argv)
+{
 
   // TODO: setup configparse
 

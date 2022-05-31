@@ -1,6 +1,6 @@
 //
 // -----------------------------------------------------------------------------
-// test_prototype.c
+// test-prototype.c
 // -----------------------------------------------------------------------------
 //
 // Tyler Wayne (c) 2022
@@ -11,13 +11,16 @@
 
 int tests_run = 0;
 
-static char *test_prototype() {
+static char 
+*test_prototype() 
+{
   int condition = 1;
   mu_assert("Condition is not true", condition);
 }
 
-static char* run_all_tests() {
-
+static char * 
+run_all_tests() 
+{
   char *(*all_tests[])() = {
     test_prototype,
     NULL
@@ -29,8 +32,9 @@ static char* run_all_tests() {
   return 0;
 }
 
-int main(int argc, char** argv) {
-
+int 
+main(int argc, char** argv) 
+{
   char* result = run_all_tests();
 
   if (result != 0) printf("%s\n", result);
@@ -39,5 +43,4 @@ int main(int argc, char** argv) {
   printf("Tests run: %d\n", tests_run);
 
   return result != 0;
-
 }

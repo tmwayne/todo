@@ -20,6 +20,8 @@
 
 #include <stdio.h> // printf
 
-void hello() {
+void 
+hello() 
+{
   printf("Hello, world!\n");
 }
