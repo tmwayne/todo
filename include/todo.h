@@ -21,4 +21,16 @@
 #ifndef TODO_INCLUDED
 #define TODO_INCLUDED
 
+// TODO: iterate on this data model
+typedef struct {
+  int  id;
+  char *name;
+  int  *parent_id;
+  char *effort;
+  char *file_date; // TODO: change this to a date type
+  char *due_date;  // TODO: change this to a date type
+} *task_T;
+
+extern void todo();
+
 #endif // TODO_INCLUDED

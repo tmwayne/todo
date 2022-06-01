@@ -18,74 +18,59 @@
 // limitations under the License.
 //
 
-#include <stdio.h>           // fprintf
-#include <stdlib.h>          // exit, EXIT_SUCCESS, EXIT_FAILURE
-#include <string.h>          // strcmp
-#include <getopt.h>          // getopt_long
-#include "error-functions.h" // fatal
-#include "helpers.h"         // hello
+#include <stdio.h>           // printf
+#include <stdlib.h>          // calloc
+#include <ncurses.h>         // initscr, cbreak, noecho, getch, endwin
+#include "error-functions.h" // errMsg
 #include "todo.h"
 
-const char *USAGE = "Usage: %s [OPTIONS...] COMMAND\n";
-
-const char *VERSION = "todo v0.1\n"
-  "Copyright (c) 2022 Tyler Wayne\n"
-  "Licensed under the Apache License, Version 2.0\n"
-  "\n"
-  "Written by Tyler Wayne.\n";
-
-const char *HELP = "Usage: %s [OPTIONS...] COMMAND\n"
-  "Just do it...\n"
-  "\n"
-  "Options:\n"
-  "  -h, --help                Print this help\n"
-  "  -v, --version             Print version info\n";
-
-int 
-main(int argc, char **argv)
+void
+printTask(task_T task)
 {
+  printf(
+    "id:        %d\n"
+    "name:      %s\n"
+    "parent_id: %d\n"
+    "effort:    %s\n"
+    "file_date: %s\n"
+    "due_date:  %s\n",
+    task->id, task->name, task->parent_id, 
+    task->effort, task->file_date, task->due_date
+  );
+}
 
-  int option_index = 0;
-  struct option longopts[] = {
-    {"version",   no_argument,  0,  'V' },
-    {"help",      no_argument,  0,  'h' },
-    {0}
-  };
+task_T 
+createDummyTask()
+{
+  task_T task;
+  task = calloc(1, sizeof(*task));
+  if (task == NULL) errMsg("calloc");
 
-  while (1) {
+  task->id        = 1;
+  task->name      = "Build todo";
+  task->effort    = "L";
+  task->file_date = "2022-05-31";
+  task->due_date  = "2022-07-01";
 
-    int opt = getopt_long(argc, argv, "hV", longopts, &option_index);
+  return task;
+}
+  
 
-    if (opt == -1) break;
+void
+todo()
+{
+  task_T task = createDummyTask();
 
-    switch (opt) {
-    /*
-    case 0:
-      if (longopts[option_index].flag) break;
-      break;
-    */
+  initscr(); // TODO: check return value
 
-    case 'h':
-      printf(HELP, argv[0]);
-      exit(EXIT_SUCCESS);
+  cbreak();   // disable line buffering
+  noecho();   // disable echo for getch
 
-    case 'V':
-      printf("%s", VERSION);
-      exit(EXIT_SUCCESS);
+  addstr("Time to do it!");
 
-    case '?':
-    case ':': // unrecognized argument
-      usageErr("Try '%s --help' for more information.\n", argv[0]);
-    
-    default: 
-      break;
-    }
-  }
+  getch();
 
-  if (optind >= argc) usageErr(USAGE, argv[0]);
-
-  printf("todo: %s\n", argv[optind]);
-
-  exit(EXIT_SUCCESS);
+  endwin(); // TODO: check return value
 
 }
+
