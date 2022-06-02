@@ -22,7 +22,7 @@ AC_PROG_CC
 
 # Checks for libraries.
 AC_SEARCH_LIBS([dlopen], [dl])
-AC_SEARCH_LIBS([initscr], [ncurses])
+AC_SEARCH_LIBS([initscr], [ncursesw])
 
 # Checks for header files.
 AC_CHECK_HEADERS([])
@@ -39,6 +39,7 @@ AC_CONFIG_FILES([
   src/Makefile
   src/common/Makefile
   src/todo/Makefile
-  test/Makefile])
+  test/Makefile
+  test/unit/Makefile])
 
 AC_OUTPUT
