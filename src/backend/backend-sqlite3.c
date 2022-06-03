@@ -18,8 +18,68 @@
 // limitations under the License.
 //
 
-void
-backend()
+#include <sqlite3.h>
+
+// TODO: use void * to make arguments generic across different backends
+task_T *
+readTasks()
 {
-  return;
+
+  sqlite3 *db;
+  sqlite3_stmt *stmt;
+  int rc;
+
+  char *filename = "test/data/test-db.sqlite3";
+  char *sql = "select * from todo";
+
+  rc = sqlite3_open_v2(
+    filename,              // filename
+    &db,                   // db handle
+    SQLITE_OPEN_READWRITE, // don't create if database doesn't exist
+    NULL                   // OS interface for db connection
+  );
+
+  if (rc != SQLITE_OK) {
+    fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+    sqlite3_close(db);
+    exit(EXIT_FAILURE);
+  }
+
+  rc = sqlite3_prepare_v2(
+    db,                // db handle
+    sql,               // sql statement
+    strlen(sql)+1,     // maximum length of sql, in bytes (including '\0')
+    &stmt,             // out: statement handle
+    NULL               // out: point to unused portion of sql
+  );
+
+  if (rc != SQLITE_OK) {
+    fprintf(stderr, "Failed to fetch data: %s\n", sqlite3_errmsg(db));
+    sqlite3_close(db);
+    exit(EXIT_FAILURE);
+  }
+
+  while ((rc = sqlite3_step(stmt)) != SQLITE_DONE) {
+
+    if (rc == SQLITE_ERROR) {
+      fprintf(stderr, "Error executing query: %s\n", sqlite3_errmsg(db));
+      sqlite3_close(db);
+      exit(EXIT_FAILURE);
+    }
+
+    int ncols = sqlite3_column_count(stmt);
+
+    for (int i=0; i<ncols; i++) {
+      const unsigned char *val = sqlite3_column_text(stmt, i);
+      if (val)
+        printf("%s\n", val);
+      else
+        printf("(null)\n");
+    }
+    printf("\n");
+
+  }
+
+  sqlite3_finalize(stmt);
+  sqlite3_close(db);
 }
