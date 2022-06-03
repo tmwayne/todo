@@ -90,7 +90,9 @@ main(int argc, char **argv)
 #define is_arg(x) (strcmp(argv[optind], (x)) == 0)
 
   if (optind == argc || is_arg("view"))
-    view();
+    // view();
+    readTasks();
+
 
   else
     usageErr("Command not recognized\n");

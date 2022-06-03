@@ -18,10 +18,15 @@
 // limitations under the License.
 //
 
+#include <stdio.h>  // fprintf
+#include <stdlib.h> // NULL
+#include <string.h> // strlen
 #include <sqlite3.h>
+#include "todo.h"   // task_T
+
 
 // TODO: use void * to make arguments generic across different backends
-task_T *
+void
 readTasks()
 {
 

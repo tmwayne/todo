@@ -21,4 +21,6 @@
 #ifndef BACKEND_SQLITE3_INCLUDED
 #define BACKEND_SQLITE3_INCLUDED
 
+extern void readTasks();
+
 #endif // BACKEND_SQLITE3_INCLUDED
