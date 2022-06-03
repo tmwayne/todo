@@ -1,6 +1,6 @@
 //
 // -----------------------------------------------------------------------------
-// todo.c
+// main.c
 // -----------------------------------------------------------------------------
 //
 // Copyright (c) 2022 Tyler Wayne
@@ -18,212 +18,83 @@
 // limitations under the License.
 //
 
-#include <stdio.h>           // printf, dprintf
-#include <stdlib.h>          // calloc, getenv
-#include <ncurses.h>         // initscr, cbreak, noecho, getch, endwin
-#include <string.h>          // strdup
-#include "error-functions.h" // errMsg
+#include <stdio.h>           // fprintf
+#include <stdlib.h>          // exit, EXIT_SUCCESS, EXIT_FAILURE
+#include <string.h>          // strcmp
+#include <getopt.h>          // getopt_long
+#include "error-functions.h" // fatal
+#include "helpers.h"         // hello
 #include "todo.h"
+#include "view.h"
+#include "backend-sqlite3.h"
 
-static task_T dummy_task;
+const char *USAGE = "Usage: %s [OPTIONS...] COMMAND\n";
 
-void
-printTask(task_T task)
+const char *VERSION = "todo v0.1\n"
+  "Copyright (c) 2022 Tyler Wayne\n"
+  "Licensed under the Apache License, Version 2.0\n"
+  "\n"
+  "Written by Tyler Wayne.\n";
+
+const char *HELP = "Usage: %s [OPTIONS...] COMMAND\n"
+  "Just do it...\n"
+  "\n"
+  "Options:\n"
+  "  -h, --help                Print this help\n"
+  "  -v, --version             Print version info\n";
+
+int 
+main(int argc, char **argv)
 {
-  printf(
-    "id:        %d\n"
-    "name:      %s\n"
-    "parent_id: %d\n"
-    "effort:    %s\n"
-    "file_date: %s\n"
-    "due_date:  %s\n",
-    task->id, task->name, task->parent_id, 
-    task->effort, task->file_date, task->due_date
-  );
-}
 
-task_T 
-createDummyTask()
-{
-  task_T task;
-  task = calloc(1, sizeof(*task));
-  if (task == NULL) errExit("calloc");
+  int option_index = 0;
+  struct option longopts[] = {
+    {"version",   no_argument,  0,  'V' },
+    {"help",      no_argument,  0,  'h' },
+    {0}
+  };
 
-  task->id        = 1;
-  task->name      = "Build todo";
-  task->parent_id = 0;
-  task->effort    = "L";
-  task->file_date = "2022-05-31";
-  task->due_date  = "2022-07-01";
+  while (1) {
 
-  return task;
-}
+    int opt = getopt_long(argc, argv, "hV", longopts, &option_index);
 
-void
-drawScreen(task_T task)
-{
-  clear();
+    if (opt == -1) break;
 
-  mvaddstr(0, 0, "Time to do it!");
-  mvaddstr(1, 0, "--------------");
-  mvaddstr(2, 0, "Task 1");
-  mvaddstr(3, 0, task->name);
-  mvaddstr(4, 0, task->effort);
-  mvaddstr(5, 0, task->file_date);
-  mvaddstr(6, 0, task->due_date);
-
-  refresh();
-
-  return;
-}
-
-void
-writeTaskToTmpFile(char *template, task_T task)
-{
-  int fd;
-
-  fd = mkstemp(template);
-  if (fd == -1)
-    errExit("mkstemp");
-
-  int size = dprintf(fd, 
-    "%s\n"  // name
-    "%s\n"  // effort
-    "%s\n"  // file_date
-    "%s\n", // due_date
-    task->name, task->effort, task->file_date, task->due_date);
-
-  if (size < 0) fatal("fprintf");
-}
-
-void
-editTmpFile(char *pathname)
-{
-  char *editor = getenv("EDITOR");
-  if (editor == NULL)
-    fatal("No editor");
-
-#define MAX_CMD_LEN 256
-  char command[MAX_CMD_LEN];
-  int n = snprintf(command, MAX_CMD_LEN-1, "%s %s", editor, pathname);
-
-  // TODO: check return code
-  def_prog_mode(); // save current tty modes
-  endwin();
-
-  int status = system(command);
-  if (status == -1) {
-    errExit("system");
-  } else {
-    if (WIFEXITED(status) && WEXITSTATUS(status) == 127)
-      fatal("Editor returned 127, likely unable to invoke shell");
-    else
-      // TODO: check return status of shell
-      // printWaitStatus(NULL, status);
-      "nothing";
-  }
-
-  refresh(); // restore save modes, repaint screen
-
-  return;
-}
-
-void
-checkEditedFile(char *pathname)
-{
-  return;
-}
-
-task_T
-parseEditedFile(char *pathname)
-{
-  task_T task;
-  task = calloc(1, sizeof(*task));
-  
-  FILE *file = fopen(pathname, "r");
-  if (!file) errExit("fopen");
-
-#define STRUCT_ELEM 4
-  char *buffer[STRUCT_ELEM] = {0};
-  size_t len = 0;
-  int nread;
-
-  for (int i=0; i < STRUCT_ELEM; i++) {
-    nread = getline(&buffer[i], &len, file);
-    if (nread == -1)
-      errExit("getline");
-
-    if (buffer[i][nread-1] == '\n')
-      buffer[i][nread-1] = '\0';
-  }
-
-  task->name = buffer[0];
-  task->effort = buffer[1];
-  task->file_date = buffer[2];
-  task->due_date = buffer[3];
-
-  return task;
-}
-
-void
-editTask()
-{
-  // Write task to temp file
-  char pathname[] = "/tmp/task-XXXXXX";
-  writeTaskToTmpFile(pathname, dummy_task);
-
-  // Open temp file in editor 
-  editTmpFile(pathname);
-
-  // Check validity of temporary file
-  checkEditedFile(pathname);
-
-  // Update results from temporary file
-  task_T edited_task = parseEditedFile(pathname);
-
-  // Update screen
-  drawScreen(edited_task);
-  
-  return;
-  
-}
-
-void 
-parser() 
-{
-  char c;
-  while (c = getch()) {
-
-    switch (c) {
-    case 'e':
-      editTask();
+    switch (opt) {
+    /*
+    case 0:
+      if (longopts[option_index].flag) break;
       break;
+    */
 
-    case 'q':
-      return;
+    case 'h':
+      printf(HELP, argv[0]);
+      exit(EXIT_SUCCESS);
 
-    default:
+    case 'V':
+      printf("%s", VERSION);
+      exit(EXIT_SUCCESS);
+
+    case '?':
+    case ':': // unrecognized argument
+      usageErr("Try '%s --help' for more information.\n", argv[0]);
+    
+    default: 
       break;
     }
-
   }
+
+  if (optind > argc) usageErr(USAGE, argv[0]);
+
+  // printf("todo: %s\n", argv[optind]);
+#define is_arg(x) (strcmp(argv[optind], (x)) == 0)
+
+  if (optind == argc || is_arg("view"))
+    view();
+
+  else
+    usageErr("Command not recognized\n");
+
+  exit(EXIT_SUCCESS);
+
 }
-  
-
-void
-todo()
-{
-  dummy_task = createDummyTask();
-
-  initscr(); // TODO: check return value
-
-  cbreak();   // disable line buffering
-  noecho();   // disable echo for getch
-
-  drawScreen(dummy_task);
-
-  parser();
-
-  endwin(); // TODO: check return value
-}
-

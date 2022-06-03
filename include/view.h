@@ -1,7 +1,9 @@
 // 
 // -----------------------------------------------------------------------------
-// todo.h
+// view.h
 // -----------------------------------------------------------------------------
+//
+// Description
 //
 // Copyright (c) 2022 Tyler Wayne
 // 
@@ -18,17 +20,9 @@
 // limitations under the License.
 //
 
-#ifndef TODO_INCLUDED
-#define TODO_INCLUDED
+#ifndef TD_VIEW_INCLUDED
+#define TD_VIEW_INCLUDED
 
-// TODO: iterate on this data model
-typedef struct {
-  int  id;
-  char *name;
-  int  *parent_id;
-  char *effort;
-  char *file_date; // TODO: change this to a date type
-  char *due_date;  // TODO: change this to a date type
-} *task_T;
+extern void view();
 
-#endif // TODO_INCLUDED
+#endif // TD_VIEW_INCLUDED

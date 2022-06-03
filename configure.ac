@@ -14,7 +14,7 @@ LT_PREREQ([2.2.])
 LT_INIT([dlopen])
 
 AC_CONFIG_MACRO_DIRS([m4])
-AC_CONFIG_SRCDIR([src/todo/main.c])
+AC_CONFIG_SRCDIR([src/todo/todo.c])
 AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
@@ -38,6 +38,7 @@ AC_CONFIG_FILES([
   include/Makefile
   src/Makefile
   src/common/Makefile
+  src/backend/Makefile
   src/todo/Makefile
   test/Makefile
   test/unit/Makefile])
