@@ -22,14 +22,16 @@
 #include <stdlib.h> // NULL
 #include <string.h> // strlen
 #include <sqlite3.h>
-#include "todo.h"   // task_T
+#include "task.h"   // task_T
+#include "error-codes.h"
 
+// TODO: abstract away the data model internals so that it's hidden
+// from the backend routines
 
 // TODO: use void * to make arguments generic across different backends
-void
+task_T *
 readTasks()
 {
-
   sqlite3 *db;
   sqlite3_stmt *stmt;
   int rc;
@@ -48,6 +50,7 @@ readTasks()
     fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
     sqlite3_close(db);
     exit(EXIT_FAILURE);
+    return NULL;
   }
 
   rc = sqlite3_prepare_v2(
@@ -64,6 +67,20 @@ readTasks()
     exit(EXIT_FAILURE);
   }
 
+  // We don't know the size of the results.
+  // We allocate a small array of tasks to hold them.
+  // If we run out of space, we resize the array doubling it's size
+  int tasks_len = 16;
+  task_T *tasks;
+  tasks = calloc(tasks_len, sizeof(*tasks));
+  if (tasks == NULL) {
+    fprintf(stderr, "Failed to allocate array of tasks\n");
+    sqlite3_close(db);
+    exit(EXIT_FAILURE);
+  }
+
+  int row_ind = 0;
+
   while ((rc = sqlite3_step(stmt)) != SQLITE_DONE) {
 
     if (rc == SQLITE_ERROR) {
@@ -72,19 +89,43 @@ readTasks()
       exit(EXIT_FAILURE);
     }
 
+    // Skip corrupted entries
+    // TODO: do we want to throw an error instead?
     int ncols = sqlite3_column_count(stmt);
+    if (ncols != TASK_NCOLS) continue;
 
-    for (int i=0; i<ncols; i++) {
-      const unsigned char *val = sqlite3_column_text(stmt, i);
-      if (val)
-        printf("%s\n", val);
-      else
-        printf("(null)\n");
+    if (row_ind >= tasks_len) {
+      tasks_len <<= 1; // double tasks_len
+      tasks = realloc(tasks, tasks_len);
+      if (tasks == NULL) {
+        fprintf(stderr, "Error resizing tasks array\n");
+        sqlite3_close(db);
+        exit(EXIT_FAILURE);
+      }
     }
-    printf("\n");
+
+    task_T task = Task_new();
+    if (task == NULL) {
+      fprintf(stderr, "Failed to allocate task\n");
+      sqlite3_close(db);
+      exit(EXIT_FAILURE);
+    }
+
+    task->id = sqlite3_column_int(stmt, 0);
+    task->parent_id = sqlite3_column_int(stmt, 1);
+    task->name = strdup(sqlite3_column_text(stmt, 2));
+    task->effort = strdup(sqlite3_column_text(stmt, 3));
+    task->file_date = strdup(sqlite3_column_text(stmt, 4));
+    task->due_date = strdup(sqlite3_column_text(stmt, 5));
+    
+    tasks[row_ind] = task;
+
+    row_ind++;
 
   }
 
   sqlite3_finalize(stmt);
   sqlite3_close(db);
+
+  return tasks;
 }

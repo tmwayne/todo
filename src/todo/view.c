@@ -24,7 +24,7 @@
 #include <string.h>          // strdup
 #include <time.h>            // time
 #include "error-functions.h" // errMsg
-#include "todo.h"            // task_T
+#include "task.h"            // task_T
 #include "view.h"
 
 static task_T dummy_task;

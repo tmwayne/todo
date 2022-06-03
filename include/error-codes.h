@@ -1,6 +1,6 @@
 // 
 // -----------------------------------------------------------------------------
-// backend-sqlite3.h
+// error-codes.h
 // -----------------------------------------------------------------------------
 //
 // Copyright (c) 2022 Tyler Wayne
@@ -18,11 +18,9 @@
 // limitations under the License.
 //
 
-#ifndef BACKEND_SQLITE3_INCLUDED
-#define BACKEND_SQLITE3_INCLUDED
+#ifndef ERROR_CODES_INCLUDED
+#define ERROR_CODES_INCLUDED
 
-#include "task.h" // task_T
+#define TD_OK 0
 
-extern task_T *readTasks();
-
-#endif // BACKEND_SQLITE3_INCLUDED
+#endif // ERROR_CODES_INCLUDED

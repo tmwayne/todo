@@ -1,6 +1,6 @@
 // 
 // -----------------------------------------------------------------------------
-// todo.h
+// task.h
 // -----------------------------------------------------------------------------
 //
 // Copyright (c) 2022 Tyler Wayne
@@ -18,17 +18,22 @@
 // limitations under the License.
 //
 
-#ifndef TODO_INCLUDED
-#define TODO_INCLUDED
+#ifndef TASK_INCLUDED
+#define TASK_INCLUDED
+
+#define TASK_NCOLS 6
 
 // TODO: iterate on this data model
 typedef struct {
   int  id;
+  int  parent_id;
   char *name;
-  int  *parent_id;
   char *effort;
   char *file_date; // TODO: change this to a date type
   char *due_date;  // TODO: change this to a date type
 } *task_T;
 
-#endif // TODO_INCLUDED
+extern task_T Task_new();
+extern void Task_free(task_T *);
+
+#endif // TASK_INCLUDED

@@ -1,6 +1,6 @@
 //
 // -----------------------------------------------------------------------------
-// main.c
+// todo.c
 // -----------------------------------------------------------------------------
 //
 // Copyright (c) 2022 Tyler Wayne
@@ -24,7 +24,7 @@
 #include <getopt.h>          // getopt_long
 #include "error-functions.h" // fatal
 #include "helpers.h"         // hello
-#include "todo.h"
+#include "task.h"
 #include "view.h"
 #include "backend-sqlite3.h"
 
@@ -89,12 +89,14 @@ main(int argc, char **argv)
   // printf("todo: %s\n", argv[optind]);
 #define is_arg(x) (strcmp(argv[optind], (x)) == 0)
 
-  if (optind == argc || is_arg("view"))
+  if (optind == argc || is_arg("view")) {
     // view();
-    readTasks();
+    task_T *tasks = readTasks();
 
+    for (int i=0; i<2; i++)
+      printf("task: %s\n", tasks[i]->name);
 
-  else
+  } else
     usageErr("Command not recognized\n");
 
   exit(EXIT_SUCCESS);

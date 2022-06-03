@@ -1,6 +1,6 @@
-// 
+//
 // -----------------------------------------------------------------------------
-// backend-sqlite3.h
+// task.c
 // -----------------------------------------------------------------------------
 //
 // Copyright (c) 2022 Tyler Wayne
@@ -18,11 +18,23 @@
 // limitations under the License.
 //
 
-#ifndef BACKEND_SQLITE3_INCLUDED
-#define BACKEND_SQLITE3_INCLUDED
+#include <stdlib.h> // calloc, free
+#include "task.h"
 
-#include "task.h" // task_T
+task_T 
+Task_new() 
+{
+  task_T task;
+  task = calloc(1, sizeof(*task));
 
-extern task_T *readTasks();
+  return task;
+}
 
-#endif // BACKEND_SQLITE3_INCLUDED
+void
+Task_free(task_T *task)
+{
+  if (task && *task) {
+    free(*task);
+    *task = NULL;
+  }
+}
