@@ -233,7 +233,7 @@ void
 parser() 
 {
   char c;
-  while (c = getch()) {
+  while ((c = getch())) {
 
     switch (c) {
     case 'e':
