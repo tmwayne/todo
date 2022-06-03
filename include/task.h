@@ -23,17 +23,18 @@
 
 #define TASK_NCOLS 6
 
-// TODO: iterate on this data model
 typedef struct {
-  int  id;
-  int  parent_id;
+  int id;
+  int parent_id;
   char *name;
   char *effort;
-  char *file_date; // TODO: change this to a date type
-  char *due_date;  // TODO: change this to a date type
+  char *file_date; 
+  char *due_date; 
 } *task_T;
 
 extern task_T Task_new();
 extern void Task_free(task_T *);
+
+extern int taskFromArray(task_T, char **);
 
 #endif // TASK_INCLUDED

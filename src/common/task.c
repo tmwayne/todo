@@ -18,7 +18,9 @@
 // limitations under the License.
 //
 
+#include <stdio.h>  // sscanf
 #include <stdlib.h> // calloc, free
+#include <string.h> // strdup
 #include "task.h"
 
 task_T 
@@ -37,4 +39,20 @@ Task_free(task_T *task)
     free(*task);
     *task = NULL;
   }
+}
+
+int
+taskFromArray(task_T task, char **arr)
+{
+  if (arr[0]) sscanf(arr[0], "%d", &task->id);
+  else task->id = 0;
+
+  if (arr[1]) sscanf(arr[1], "%d", &task->parent_id);
+  else task->parent_id = 0;
+  task->name = strdup(arr[2]);
+  task->effort = strdup(arr[3]);
+  task->file_date = strdup(arr[4]);
+  task->due_date = strdup(arr[5]);
+
+  return 0;
 }

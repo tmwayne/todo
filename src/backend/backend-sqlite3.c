@@ -25,10 +25,6 @@
 #include "task.h"   // task_T
 #include "error-codes.h"
 
-// TODO: abstract away the data model internals so that it's hidden
-// from the backend routines
-
-// TODO: use void * to make arguments generic across different backends
 task_T *
 readTasks()
 {
@@ -104,23 +100,19 @@ readTasks()
       }
     }
 
+    char *buf[TASK_NCOLS];
+    for (int i=0; i<TASK_NCOLS; i++)
+      buf[i] = (char *) sqlite3_column_text(stmt, i);
+
     task_T task = Task_new();
     if (task == NULL) {
-      fprintf(stderr, "Failed to allocate task\n");
+      fprintf(stderr, "Error allocating new task\n");
       sqlite3_close(db);
       exit(EXIT_FAILURE);
     }
 
-    task->id = sqlite3_column_int(stmt, 0);
-    task->parent_id = sqlite3_column_int(stmt, 1);
-    task->name = strdup(sqlite3_column_text(stmt, 2));
-    task->effort = strdup(sqlite3_column_text(stmt, 3));
-    task->file_date = strdup(sqlite3_column_text(stmt, 4));
-    task->due_date = strdup(sqlite3_column_text(stmt, 5));
-    
-    tasks[row_ind] = task;
-
-    row_ind++;
+    taskFromArray(task, buf);
+    tasks[row_ind++] = task;
 
   }
 
