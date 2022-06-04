@@ -20,6 +20,7 @@
 
 #include <stdio.h>           // printf, dprintf
 #include <stdlib.h>          // calloc, getenv, srand, rand
+#include <unistd.h>          // unlink, close
 #include <ncurses.h>         // initscr, cbreak, noecho, getch, endwin
 #include <string.h>          // strdup
 #include <time.h>            // time
@@ -27,6 +28,7 @@
 #include "task.h"            // task_T
 #include "view.h"
 #include "backend-sqlite3.h" // readTasks
+#include "error-codes.h"     // TD_OK
 
 static task_T dummy_task;
 
@@ -71,8 +73,8 @@ drawTask(int row, int col, task_T task)
   return row;
 }
 
-void
-drawScreen(task_T *tasks, int len)
+int
+viewList(list_T list)
 {
   clear();
 
@@ -80,13 +82,13 @@ drawScreen(task_T *tasks, int len)
   mvaddstr(1, 0, "--------------");
 
   int row = 2;
-  for (int i=0; i<len; i++)
-    row = drawTask(row, 0, tasks[i]);
+  for (int i=0; i<list->ntasks; i++)
+    row = drawTask(row, 0, list->tasks[i]);
 
   move(row-1, 0);
   refresh();
 
-  return;
+  return TD_OK;
 }
 
 void
@@ -177,6 +179,7 @@ parseEditedFile(char *pathname)
   return task;
 }
 
+/*
 void
 editTask()
 {
@@ -194,9 +197,63 @@ editTask()
   task_T edited_task = parseEditedFile(pathname);
 
   // Update screen
-  drawScreen(&edited_task, 1);
+  viewList(&edited_task, 1);
   
   return;
+  
+}
+*/
+
+int
+pageHelp(char *filename)
+{
+  char *pager = getenv("PAGER");
+  if (pager == NULL) return -1;
+
+#define MAX_CMD_LEN 256
+  char command[MAX_CMD_LEN];
+  int n = snprintf(command, MAX_CMD_LEN-1, "%s %s", pager, filename);
+
+  // TODO: check return code
+  def_prog_mode(); // save current tty modes
+  endwin();
+
+  int status = system(command);
+  if (status == -1) {
+    return -1; // TODO: return error code
+  } else {
+    if (WIFEXITED(status) && WEXITSTATUS(status) == 127)
+      return -1; // TODO: return error code
+      // fatal("Editor returned 127, likely unable to invoke shell");
+    // else
+      // TODO: check return status of shell
+      // printWaitStatus(NULL, status);
+  }
+
+  refresh(); // restore save modes, repaint screen
+
+  return TD_OK;
+}
+
+int
+viewHelp()
+{
+
+  char *help =
+#include "help.inc"
+
+  char filename[] = "/tmp/help-XXXXXX";
+
+  int fd = mkstemp(filename);
+  if (fd == -1) return -1; // TODO: return error code
+
+  if (dprintf(fd, "%s", help) < 0) return -1;
+  if (pageHelp(filename) != TD_OK) return -1;
+
+  unlink(filename);
+  if (close(fd) == -1) return -1; // TODO: return error code
+  
+  return TD_OK;
   
 }
 
@@ -233,6 +290,14 @@ parser()
       // editTask();
       // break;
 
+    case 'h':
+      if (viewHelp() != TD_OK) {
+        endwin();
+        fprintf(stderr, "Error opening help\n");
+        exit(EXIT_FAILURE);
+      }
+      break;
+
     case 'j':
       moveDown();
       break;
@@ -262,7 +327,7 @@ view(int argc, char **argv)
 
   list_T list = readTasks();
 
-  drawScreen(list->tasks, list->ntasks);
+  viewList(list);
 
   parser();
 
