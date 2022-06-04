@@ -90,11 +90,7 @@ main(int argc, char **argv)
 #define is_arg(x) (strcmp(argv[optind], (x)) == 0)
 
   if (optind == argc || is_arg("view")) {
-    // view();
-    task_T *tasks = readTasks();
-
-    for (int i=0; i<2; i++)
-      printf("task: %s\n", tasks[i]->name);
+    view();
 
   } else
     usageErr("Command not recognized\n");

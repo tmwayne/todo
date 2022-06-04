@@ -32,9 +32,19 @@ typedef struct {
   char *due_date; 
 } *task_T;
 
-extern task_T Task_new();
-extern void Task_free(task_T *);
+typedef struct {
+  char *name;    // name of list
+  int len;       // length of tasks array
+  int ntasks;    // number of tasks
+  task_T *tasks; // tasks array
+} *list_T;
 
+extern task_T taskNew();
+extern void taskFree(task_T *);
 extern int taskFromArray(task_T, char **);
+
+extern list_T listNew(char *);
+extern void listFree(list_T *);
+extern int listAddTask(list_T, task_T);
 
 #endif // TASK_INCLUDED

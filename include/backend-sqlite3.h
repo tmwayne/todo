@@ -23,6 +23,6 @@
 
 #include "task.h" // task_T
 
-extern task_T *readTasks();
+extern list_T readTasks();
 
 #endif // BACKEND_SQLITE3_INCLUDED

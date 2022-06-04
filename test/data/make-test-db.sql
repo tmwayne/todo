@@ -32,7 +32,8 @@ create table todo (
 insert into todo (id, parent_id, name, effort, file_date, due_date)
 values
     (2, null, "Write todo", "L", "2022-06-01", "2022-07-01"),
-    (7, 2, "celebrate!", "S", "2022-06-01", "2022-07-01");
+    (7, 2, "celebrate!", "S", "2022-06-01", "2022-07-01"),
+    (11, 2, "be productive", "S", "2022-06-03", "2022-08-01");
 
 
 

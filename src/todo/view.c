@@ -26,6 +26,7 @@
 #include "error-functions.h" // errMsg
 #include "task.h"            // task_T
 #include "view.h"
+#include "backend-sqlite3.h" // readTasks
 
 static task_T dummy_task;
 
@@ -66,15 +67,7 @@ createTask(char *name)
 int
 drawTask(int row, int col, task_T task)
 {
-  char num[3];
-  snprintf(num, 3, "%d", task->id);
-
-  mvaddstr(row++, 0, num);
   mvaddstr(row++, 0, task->name);
-  mvaddstr(row++, 0, task->effort);
-  mvaddstr(row++, 0, task->file_date);
-  mvaddstr(row++, 0, task->due_date);
-
   return row;
 }
 
@@ -236,9 +229,9 @@ parser()
   while ((c = getch())) {
 
     switch (c) {
-    case 'e':
-      editTask();
-      break;
+    // case 'e':
+      // editTask();
+      // break;
 
     case 'j':
       moveDown();
@@ -261,19 +254,15 @@ parser()
 void
 view(int argc, char **argv)
 {
-  // dummy_task = createTask();
-  task_T tasks[2] = {
-    createTask("write todo"),
-    createTask("celebrate")
-  };
-
 
   initscr(); // TODO: check return value
 
   cbreak();   // disable line buffering
   noecho();   // disable echo for getch
 
-  drawScreen(tasks, 2);
+  list_T list = readTasks();
+
+  drawScreen(list->tasks, list->ntasks);
 
   parser();
 

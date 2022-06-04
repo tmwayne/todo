@@ -25,7 +25,7 @@
 #include "task.h"   // task_T
 #include "error-codes.h"
 
-task_T *
+list_T
 readTasks()
 {
   sqlite3 *db;
@@ -63,14 +63,9 @@ readTasks()
     exit(EXIT_FAILURE);
   }
 
-  // We don't know the size of the results.
-  // We allocate a small array of tasks to hold them.
-  // If we run out of space, we resize the array doubling it's size
-  int tasks_len = 16;
-  task_T *tasks;
-  tasks = calloc(tasks_len, sizeof(*tasks));
-  if (tasks == NULL) {
-    fprintf(stderr, "Failed to allocate array of tasks\n");
+  list_T list = listNew("default");
+  if (list == NULL) {
+    fprintf(stderr, "Failed to create list\n");
     sqlite3_close(db);
     exit(EXIT_FAILURE);
   }
@@ -90,21 +85,11 @@ readTasks()
     int ncols = sqlite3_column_count(stmt);
     if (ncols != TASK_NCOLS) continue;
 
-    if (row_ind >= tasks_len) {
-      tasks_len <<= 1; // double tasks_len
-      tasks = realloc(tasks, tasks_len);
-      if (tasks == NULL) {
-        fprintf(stderr, "Error resizing tasks array\n");
-        sqlite3_close(db);
-        exit(EXIT_FAILURE);
-      }
-    }
-
     char *buf[TASK_NCOLS];
     for (int i=0; i<TASK_NCOLS; i++)
       buf[i] = (char *) sqlite3_column_text(stmt, i);
 
-    task_T task = Task_new();
+    task_T task = taskNew();
     if (task == NULL) {
       fprintf(stderr, "Error allocating new task\n");
       sqlite3_close(db);
@@ -112,12 +97,12 @@ readTasks()
     }
 
     taskFromArray(task, buf);
-    tasks[row_ind++] = task;
+    listAddTask(list, task);
 
   }
 
   sqlite3_finalize(stmt);
   sqlite3_close(db);
 
-  return tasks;
+  return list;
 }
