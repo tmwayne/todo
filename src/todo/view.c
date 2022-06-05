@@ -166,18 +166,36 @@ moveUp()
   if (cur_row > 0) move(cur_row-1, cur_col);
 }
 
+#define clearStatusLine() do { \
+  move(max_row-1, 0);          \
+  clrtoeol();                  \
+  move(cur_row, cur_col);      \
+} while(0);
+
 void 
-parser(list_T list)
+eventLoop()
 {
-  char c;
-  int cur_row, cur_col;
+
+  list_T list = readTasks(); // TODO: should list be an arg?
+  list_T updates = listNew("updates");
+
+  viewListScreen(list);
+
+  char c, answer;
+  int cur_row, cur_col, max_row, max_col; 
+  int save_row, save_col;
   while ((c = getch())) {
+
+    getyx(stdscr, cur_row, cur_col);
+    getmaxyx(stdscr, max_row, max_col);
+
+    clearStatusLine();
 
     switch (c) {
     case 'e':
-      getyx(stdscr, cur_row, cur_col);
       if (cur_row > 0 && cur_row <= list->ntasks) {
         editTask(&list->tasks[cur_row-1]);
+        listAddTask(updates, list->tasks[cur_row-1]);
         viewListScreen(list);
       }
       break;
@@ -201,6 +219,25 @@ parser(list_T list)
     case 'q':
       return;
 
+    case 's':
+      save_row = cur_row, save_col = cur_col;
+      mvaddstr(max_row-1, 0, "Save changes? (y/n) ");
+      refresh();
+      answer = getch();
+      move(max_row-1, 0);
+      clrtoeol();
+      if (answer == 'y') {
+        if (writeUpdates(updates) == TD_OK)
+          // mvaddstr(max_row-1, 0, "Changes successfully saved to backend.");
+          addstr("Changes successfully saved to backend.");
+        else
+          addstr("Unable to save changes to backend.");
+      } else
+        addstr("Changes not saved to backend.");
+      refresh();
+      move(save_row, save_col);
+      break;
+
     default:
       break;
     }
@@ -213,15 +250,10 @@ view(int argc, char **argv)
 {
 
   initscr(); // TODO: check return value
-
   cbreak();   // disable line buffering
   noecho();   // disable echo for getch
 
-  list_T list = readTasks();
-
-  viewListScreen(list);
-
-  parser(list);
+  eventLoop();
 
   endwin(); // TODO: check return value
 }
