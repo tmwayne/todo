@@ -217,8 +217,26 @@ eventLoop()
       break;
 
     case 'q':
-      return;
-
+      if (updates->ntasks == 0) return;
+      else {
+        save_row = cur_row, save_col = cur_col;
+        mvaddstr(max_row-1, 0, "Save changes before quitting? (y/n) ");
+        refresh();
+        answer = getch();
+        if (answer != 'y') return;
+        else if (writeUpdates(updates) == TD_OK) return;
+        else {
+          move(max_row-1, 0);
+          clrtoeol();
+          addstr("Unable to save changes. Quit anyway? (y/n) ");
+          refresh();
+          answer = getch();
+          if (answer == 'y') return;
+          else move(save_row, save_col);
+        }
+      }
+      break;
+            
     case 's':
       save_row = cur_row, save_col = cur_col;
       mvaddstr(max_row-1, 0, "Save changes? (y/n) ");

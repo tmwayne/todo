@@ -105,6 +105,11 @@ main(int argc, char **argv)
   else if (is_arg("dump"))
     dumpTasks();
 
+  else if (is_arg("help")) {
+    printf(HELP, argv[0], argv[0]);
+    exit(EXIT_SUCCESS);
+  }
+
   else
     usageErr("Command not recognized\n");
 

@@ -208,6 +208,8 @@ writeUpdates(list_T updates)
   for (int i=0; i < updates->ntasks; i++)
     if (updateTask(updates->tasks[i]) != TD_OK) return -1;
 
+  updates->ntasks = 0;
+
   return TD_OK;
 
 }
