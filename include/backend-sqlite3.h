@@ -24,5 +24,6 @@
 #include "task.h" // task_T
 
 extern list_T readTasks();
+extern int dumpTasks();
 
 #endif // BACKEND_SQLITE3_INCLUDED

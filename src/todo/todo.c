@@ -18,30 +18,40 @@
 // limitations under the License.
 //
 
-#include <stdio.h>           // fprintf
+#include <stdio.h>           // printf, fprintf
 #include <stdlib.h>          // exit, EXIT_SUCCESS, EXIT_FAILURE
 #include <string.h>          // strcmp
 #include <getopt.h>          // getopt_long
 #include "error-functions.h" // fatal
 #include "helpers.h"         // hello
-#include "task.h"
-#include "view.h"
-#include "backend-sqlite3.h"
+#include "task.h"            // task_T
+#include "view.h"            // view
+#include "backend-sqlite3.h" // dumpTasks
 
 const char *USAGE = "Usage: %s [OPTIONS...] COMMAND\n";
 
-const char *VERSION = "todo v0.1\n"
-  "Copyright (c) 2022 Tyler Wayne\n"
-  "Licensed under the Apache License, Version 2.0\n"
-  "\n"
-  "Written by Tyler Wayne.\n";
+const char *VERSION = "\
+todo v0.1                                       \n\
+Copyright (c) 2022 Tyler Wayne                  \n\
+Licensed under the Apache License, Version 2.0  \n\
+                                                \n\
+Written by Tyler Wayne.                         \n\
+";
 
-const char *HELP = "Usage: %s [OPTIONS...] COMMAND\n"
-  "Just do it...\n"
-  "\n"
-  "Options:\n"
-  "  -h, --help                Print this help\n"
-  "  -v, --version             Print version info\n";
+const char *HELP = "\
+Usage: %s [OPTIONS...] COMMAND                              \n\
+Manage todo lists                                           \n\
+                                                            \n\
+Options:                                                    \n\
+  -h, --help                Print this help                 \n\
+  -v, --version             Print version info              \n\
+                                                            \n\
+Commands:                                                   \n\
+  dump    Dump todo list to stdout in tabular form          \n\
+  view    View todo lists and make edits. (default)         \n\
+                                                            \n\
+Run '%s COMMAND --help' for more information on a command.  \n\
+";
 
 int 
 main(int argc, char **argv)
@@ -68,7 +78,7 @@ main(int argc, char **argv)
     */
 
     case 'h':
-      printf(HELP, argv[0]);
+      printf(HELP, argv[0], argv[0]);
       exit(EXIT_SUCCESS);
 
     case 'V':
@@ -89,10 +99,13 @@ main(int argc, char **argv)
   // printf("todo: %s\n", argv[optind]);
 #define is_arg(x) (strcmp(argv[optind], (x)) == 0)
 
-  if (optind == argc || is_arg("view")) {
+  if (optind == argc || is_arg("view"))
     view();
 
-  } else
+  else if (is_arg("dump"))
+    dumpTasks();
+
+  else
     usageErr("Command not recognized\n");
 
   exit(EXIT_SUCCESS);

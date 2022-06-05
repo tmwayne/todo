@@ -18,12 +18,15 @@
 // limitations under the License.
 //
 
-#include <stdio.h>  // fprintf
-#include <stdlib.h> // NULL
-#include <string.h> // strlen
+#include <stdio.h>           // fprintf
+#include <stdlib.h>          // NULL
+#include <string.h>          // strlen
 #include <sqlite3.h>
-#include "task.h"   // task_T
+#include "task.h"            // task_T
 #include "error-codes.h"
+#include "error-functions.h" // errExit
+
+// TODO: parameterize readTasks (filename, db, table, etc)
 
 list_T
 readTasks()
@@ -105,4 +108,19 @@ readTasks()
   sqlite3_close(db);
 
   return list;
+}
+
+int
+dumpTasks()
+{
+
+  char command[] = "sqlite3 -header test/data/test-db.sqlite3 'select * from todo'";
+
+  int status = system(command);
+  if (status == -1) {
+    errExit("system");
+  }
+  // TODO: finish error checking system here
+
+  return TD_OK;
 }
