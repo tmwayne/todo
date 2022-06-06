@@ -22,8 +22,7 @@
 #include <stdlib.h>          // exit, EXIT_SUCCESS, EXIT_FAILURE
 #include <string.h>          // strcmp
 #include <getopt.h>          // getopt_long
-#include "error-functions.h" // fatal
-#include "helpers.h"         // hello
+#include "error-functions.h" // usageErr
 #include "task.h"            // task_T
 #include "view.h"            // view
 #include "backend-sqlite3.h" // dumpTasks
