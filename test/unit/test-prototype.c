@@ -7,8 +7,10 @@
 //
 
 #include <stdio.h>
-#include "helpers.h" // exampleFunction
 #include "minunit.h"
+#include "error-codes.h"
+#include "task.h"            // list_T
+#include "backend-sqlite3.h" // readTasks
 
 int tests_run = 0;
 
@@ -20,15 +22,10 @@ static char
 }
 
 static char
-*test_exampleFunction()
+*test_readTasks()
 {
-  mu_assert("Fail", exampleFunction(0) == 0);
-}
-
-static char
-*test_exampleFunction2()
-{
-  mu_assert("Fail 2", exampleFunction(1) != 0);
+  list_T list = NULL;
+  mu_assert("Database doesn't exist", readTasks(&list) == TD_OK);
 }
 
 static char * 
@@ -36,8 +33,7 @@ run_all_tests()
 {
   char *(*all_tests[])() = {
     // test_prototype,
-    test_exampleFunction,
-    test_exampleFunction2,
+    test_readTasks,
     NULL
   };
 

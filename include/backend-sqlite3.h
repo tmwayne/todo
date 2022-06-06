@@ -23,7 +23,7 @@
 
 #include "task.h" // task_T
 
-extern list_T readTasks();
+extern int readTasks(list_T *);
 extern int writeUpdates(list_T);
 extern int dumpTasks();
 

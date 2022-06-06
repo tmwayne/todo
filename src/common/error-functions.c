@@ -74,6 +74,7 @@ static void
 outputError(bool useErr, int err, bool flushStdout,
   const char *format, va_list ap)
 {
+// TODO: double check that this is safe
 #define BUF_SIZE 500
   char buf[BUF_SIZE], userMsg[BUF_SIZE], errText[BUF_SIZE];
 
@@ -82,14 +83,14 @@ outputError(bool useErr, int err, bool flushStdout,
   if (useErr)
     snprintf(errText, BUF_SIZE, " [%s %s]",
       (err > 0 && err < MAX_ENAME) ? 
-      ename[err] : "?UNKNOWN?", strerror(err));
+      ename[err] : "Unknown error code", strerror(err));
   else
     snprintf(errText, BUF_SIZE, ":");
 
-  snprintf(buf, BUF_SIZE, "ERROR%s %s\n", errText, userMsg);
+  snprintf(buf, BUF_SIZE, "Error%s %s\n", errText, userMsg);
 
-  if (flushStdout)
-    fflush(stdout); // flush any pending stdout
+  if (flushStdout) fflush(stdout); // flush any pending stdout
+
   fputs(buf, stderr);
   fflush(stderr);   // in case stderr is not line-buffered
 }
@@ -110,7 +111,7 @@ errMsg(const char *format, ...)
 }
 
 void
-errExit(const char *format, ...)
+sysErrExit(const char *format, ...)
 {
   va_list argList;
 
@@ -122,7 +123,7 @@ errExit(const char *format, ...)
 }
 
 void
-err_exit(const char *format, ...)
+sysErr_Exit(const char *format, ...)
 {
   va_list argList;
 
@@ -134,19 +135,19 @@ err_exit(const char *format, ...)
 }
 
 void
-errExitEN(int errnum, const char *format, ...)
+sysErrExitEN(int errno, const char *format, ...)
 {
   va_list argList;
 
   va_start(argList, format);
-  outputError(true, errnum, true, format, argList);
+  outputError(true, errno, true, format, argList);
   va_end(argList);
 
   terminate(true);
 }
 
 void
-fatal(const char *format, ...)
+errExit(const char *format, ...)
 {
   va_list argList;
 
@@ -168,6 +169,7 @@ usageErr(const char *format, ...)
   va_start(argList, format);
   vfprintf(stderr, format, argList);
   va_end(argList);
+
   fflush(stderr); // in case stderr is not line-buffered
   exit(EXIT_FAILURE);
 }

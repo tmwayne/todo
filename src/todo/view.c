@@ -180,11 +180,12 @@ void
 eventLoop()
 {
 
-  list_T list = readTasks(); // TODO: should list be an arg?
+  list_T list = NULL;
+  readTasks(&list); 
 
   // TODO: make updates a hash table so that per session only
   // one update per task is made
-  list_T updates = listNew("updates");
+  list_T updates = listNew("default_list");
 
   viewListScreen(list);
 

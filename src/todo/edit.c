@@ -33,7 +33,7 @@ writeTaskToTmpFile(char *template, task_T task)
 
   fd = mkstemp(template);
   if (fd == -1)
-    errExit("mkstemp");
+    sysErrExit("mkstemp");
 
   int size = dprintf(fd, 
     "%s\n"  // name
@@ -42,7 +42,8 @@ writeTaskToTmpFile(char *template, task_T task)
     "%s\n", // due_date
     task->name, task->effort, task->file_date, task->due_date);
 
-  if (size < 0) fatal("fprintf");
+  if (size < 0)
+    errExit("Error writing task to temp file");
 }
 
 // TODO: need version when not in view (curses) mode
@@ -51,7 +52,7 @@ editTmpFile(char *pathname)
 {
   char *editor = getenv("EDITOR");
   if (editor == NULL)
-    fatal("No editor");
+    errExit("EDITOR isn't set");
 
 #define MAX_CMD_LEN 256
   char command[MAX_CMD_LEN];
@@ -63,14 +64,14 @@ editTmpFile(char *pathname)
 
   int status = system(command);
   if (status == -1) {
-    errExit("system");
+    sysErrExit("system");
   } else {
     if (WIFEXITED(status) && WEXITSTATUS(status) == 127)
-      fatal("Editor returned 127, likely unable to invoke shell");
-    else
+      errExit("Editor returned 127, likely unable to invoke shell");
+    // else
       // TODO: check return status of shell
       // printWaitStatus(NULL, status);
-      "nothing";
+      // "nothing";
   }
 
   refresh(); // restore save modes, repaint screen
@@ -101,7 +102,7 @@ parseEditedFile(char *pathname)
   for (int i=0; i < STRUCT_ELEM; i++) {
     nread = getline(&buffer[i], &len, file);
     if (nread == -1)
-      errExit("getline");
+      sysErrExit("getline");
 
     if (buffer[i][nread-1] == '\n')
       buffer[i][nread-1] = '\0';

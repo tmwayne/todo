@@ -28,29 +28,42 @@
 
 // TODO: parameterize readTasks (filename, db, table, etc)
 
-list_T
-readTasks()
+#ifdef TESTING
+#define sqlErr(fmt, ...) return -1;
+#else
+#define sqlErr(fmt, ...) do {               \
+    sqlite3_close(db);                      \
+    errExit(fmt __VA_OPT__(,) __VA_ARGS__); \
+  } while (0);
+#endif
+
+#define BUF_LEN 512
+#define MAX_SQL_LEN 2048
+#define FILENAME "test/data/test-db.sqlite3"
+
+int
+readTasks(list_T *list)
 {
+  // TODO: make the list name a parameter
+  if (*list == NULL) *list = listNew("default_list");
+
   sqlite3 *db;
   sqlite3_stmt *stmt;
   int rc;
 
-  char *filename = "test/data/test-db.sqlite3";
-  char *sql = "select * from todo";
+  // TODO: need to guard against SQL injection here
+  char sql[BUF_LEN];
+  snprintf(sql, BUF_LEN, "select * from %s", (*list)->name);
 
   rc = sqlite3_open_v2(
-    filename,              // filename
+    FILENAME,              // filename
     &db,                   // db handle
     SQLITE_OPEN_READWRITE, // don't create if database doesn't exist
     NULL                   // OS interface for db connection
   );
 
-  if (rc != SQLITE_OK) {
-    fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
-    sqlite3_close(db);
-    exit(EXIT_FAILURE);
-    return NULL;
-  }
+  if (rc != SQLITE_OK) 
+    sqlErr("Can't open database: %s", sqlite3_errmsg(db));
 
   rc = sqlite3_prepare_v2(
     db,                // db handle
@@ -60,28 +73,15 @@ readTasks()
     NULL               // out: point to unused portion of sql
   );
 
-  if (rc != SQLITE_OK) {
-    fprintf(stderr, "Failed to fetch data: %s\n", sqlite3_errmsg(db));
-    sqlite3_close(db);
-    exit(EXIT_FAILURE);
-  }
-
-  list_T list = listNew("default");
-  if (list == NULL) {
-    fprintf(stderr, "Failed to create list\n");
-    sqlite3_close(db);
-    exit(EXIT_FAILURE);
-  }
+  if (rc != SQLITE_OK) 
+    sqlErr("Unable to prepare SQL for fetching tasks: %s", sqlite3_errmsg(db));
 
   int row_ind = 0;
 
   while ((rc = sqlite3_step(stmt)) != SQLITE_DONE) {
 
-    if (rc == SQLITE_ERROR) {
-      fprintf(stderr, "Error executing query: %s\n", sqlite3_errmsg(db));
-      sqlite3_close(db);
-      exit(EXIT_FAILURE);
-    }
+    if (rc == SQLITE_ERROR)
+      sqlErr("Unable to fetch tasks: %s", sqlite3_errmsg(db));
 
     // Skip corrupted entries
     // TODO: do we want to throw an error instead?
@@ -93,55 +93,48 @@ readTasks()
       buf[i] = (char *) sqlite3_column_text(stmt, i);
 
     task_T task = taskNew();
-    if (task == NULL) {
-      fprintf(stderr, "Error allocating new task\n");
-      sqlite3_close(db);
-      exit(EXIT_FAILURE);
-    }
+    if (task == NULL)
+      sqlErr("Failed to allocate new task");
 
     taskFromArray(task, buf);
-    listAddTask(list, task);
+    listAddTask(*list, task);
 
   }
 
   sqlite3_finalize(stmt);
   sqlite3_close(db);
 
-  return list;
+  return TD_OK;
 }
 
 static int
-updateTask(task_T task)
+updateTask(char *list_name, task_T task)
 {
   sqlite3 *db;
   sqlite3_stmt *stmt;
   int rc;
 
-  char *filename = "test/data/test-db.sqlite3";
-
-  char *sql = "\
-  update todo         \
-  set parent_id = ?2, \
-    name = ?3,        \
-    effort = ?4,      \
-    file_date = ?5,   \
-    due_date = ?6     \
-  where id = ?1       \
-  ";
+  // TODO: need to guard against SQL injection here
+  char sql[MAX_SQL_LEN];
+  snprintf(sql, MAX_SQL_LEN,
+    "update %s          \
+    set parent_id = ?2, \
+      name = ?3,        \
+      effort = ?4,      \
+      file_date = ?5,   \
+      due_date = ?6     \
+    where id = ?1", 
+    list_name);
 
   rc = sqlite3_open_v2(
-    filename,              // filename
+    FILENAME,              // filename
     &db,                   // db handle
     SQLITE_OPEN_READWRITE, // don't create if database doesn't exist
     NULL                   // OS interface for db connection
   );
 
-  if (rc != SQLITE_OK) {
-    fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
-    sqlite3_close(db);
-    exit(EXIT_FAILURE);
-    return -1;
-  }
+  if (rc != SQLITE_OK)
+    sqlErr("Unable to open database: %s", sqlite3_errmsg(db));
 
   rc = sqlite3_prepare_v2(
     db,                // db handle
@@ -151,46 +144,27 @@ updateTask(task_T task)
     NULL               // out: point to unused portion of sql
   );
 
-  if (rc != SQLITE_OK) {
-    fprintf(stderr, "Failed to fetch data: %s\n", sqlite3_errmsg(db));
-    sqlite3_close(db);
-    exit(EXIT_FAILURE);
-  }
+  if (rc != SQLITE_OK) 
+    sqlErr("Unable to prepare SQL for update tasks: %s", sqlite3_errmsg(db));
 
-  // TODO: check if values are NULL
+  // Need to check if the value before binding it to the SQL statement
+
+#define bind_int(ind, val) do {                               \
+  if ((val) == 0)                                             \
+    sqlite3_bind_null(stmt, (ind));                           \
+  else                                                        \
+    sqlite3_bind_int(stmt, (ind), (val));                     \
+  } while (0);
 
   sqlite3_bind_int(stmt, 1, task->id);
+  bind_int(2, task->parent_id);
+  sqlite3_bind_text(stmt, 3, task->name, -1, SQLITE_STATIC);
+  sqlite3_bind_text(stmt, 4, task->effort, -1, SQLITE_STATIC);
+  sqlite3_bind_text(stmt, 5, task->file_date, -1, SQLITE_STATIC);
+  sqlite3_bind_text(stmt, 6, task->due_date, -1, SQLITE_STATIC);
 
-  if (task->parent_id == 0)
-    sqlite3_bind_null(stmt, 2);
-  else
-    sqlite3_bind_int(stmt, 2, task->parent_id);
-
-  if (task->name == NULL)
-    sqlite3_bind_null(stmt, 3);
-  else
-    sqlite3_bind_text(stmt, 3, task->name, -1, SQLITE_STATIC);
-
-  if (task->effort == NULL)
-    sqlite3_bind_null(stmt, 4);
-  else 
-    sqlite3_bind_text(stmt, 4, task->effort, -1, SQLITE_STATIC);
-
-  if (task->file_date == NULL)
-    sqlite3_bind_null(stmt, 5);
-  else
-    sqlite3_bind_text(stmt, 5, task->file_date, -1, SQLITE_STATIC);
-
-  if (task->due_date == NULL)
-    sqlite3_bind_null(stmt, 6);
-  else
-    sqlite3_bind_text(stmt, 6, task->due_date, -1, SQLITE_STATIC);
-
-  if ((rc = sqlite3_step(stmt)) != SQLITE_DONE) {
-    fprintf(stderr, "Failed to update database: %s\n", sqlite3_errmsg(db));
-    sqlite3_close(db);
-    exit(EXIT_FAILURE);
-  }
+  if ((rc = sqlite3_step(stmt)) != SQLITE_DONE)
+    sqlErr("Failed to update database: %s", sqlite3_errmsg(db));
 
   sqlite3_finalize(stmt);
   sqlite3_close(db);
@@ -202,11 +176,10 @@ updateTask(task_T task)
 int
 writeUpdates(list_T updates)
 {
-
   if (updates == NULL) return -1; // TODO: return error code
 
   for (int i=0; i < updates->ntasks; i++)
-    if (updateTask(updates->tasks[i]) != TD_OK) return -1;
+    if (updateTask(updates->name, updates->tasks[i]) != TD_OK) return -1;
 
   updates->ntasks = 0;
 
@@ -218,7 +191,9 @@ int
 dumpTasks()
 {
 
-  char command[] = "sqlite3 -header test/data/test-db.sqlite3 'select * from todo'";
+  // char command[BUF_LEN];
+
+  char command[] = "sqlite3 -header test/data/test-db.sqlite3 'select * from default_list'";
 
   int status = system(command);
   if (status == -1) {

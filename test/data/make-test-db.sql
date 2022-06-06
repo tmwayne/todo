@@ -18,9 +18,9 @@
 -- limitations under the License.
 --
 
-drop table if exists todo;
+drop table if exists default_list;
 
-create table todo (
+create table default_list (
     id int primary key,
     parent_id int,
     name text not null,
@@ -29,7 +29,7 @@ create table todo (
     due_date text
 );
 
-insert into todo (id, parent_id, name, effort, file_date, due_date)
+insert into default_list (id, parent_id, name, effort, file_date, due_date)
 values
     (2, null, "Write todo", "L", "2022-06-01", "2022-07-01"),
     (7, 2, "celebrate!", "S", "2022-06-01", "2022-07-01"),

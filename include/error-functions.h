@@ -29,20 +29,20 @@ void errMsg(const char *format, ...);
 #define NORETURN
 #endif
 
-// Print error text and exit the program
-void errExit(const char *format, ...) NORETURN;
+// Print system call error text and exit the program
+void sysErrExit(const char *format, ...) NORETURN;
 
-// Print error text, but don't flush stdout before printing error message
-// and terminate by calling_exit(2) instead of exit(3), 
+// Print system call error text, but don't flush stdout before printing 
+// error message and terminate by calling_exit(2) instead of exit(3), 
 // which terminates without flushing stdout buffers and without
 // invoking exit handlers
-void err_exit(const char *format, ...) NORETURN;
+void sysErr_Exit(const char *format, ...) NORETURN;
 
 // Print the text corresponding to the error number and exit the program
-void errExitEN(int errnum, const char *format, ...) NORETURN;
+void sysErrExitEN(int errno, const char *format, ...) NORETURN;
 
 // Diagnose general errors, including from functions that don't set errno
-void fatal(const char *format, ...) NORETURN;
+void errExit(const char *format, ...) NORETURN;
 
 // Diagnose errors in command-line usage
 void usageErr(const char *format, ...) NORETURN;
