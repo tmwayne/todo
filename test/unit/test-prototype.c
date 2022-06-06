@@ -7,6 +7,7 @@
 //
 
 #include <stdio.h>
+#include "helpers.h" // exampleFunction
 #include "minunit.h"
 
 int tests_run = 0;
@@ -18,11 +19,25 @@ static char
   mu_assert("Condition is not true", condition);
 }
 
+static char
+*test_exampleFunction()
+{
+  mu_assert("Fail", exampleFunction(0) == 0);
+}
+
+static char
+*test_exampleFunction2()
+{
+  mu_assert("Fail 2", exampleFunction(1) != 0);
+}
+
 static char * 
 run_all_tests() 
 {
   char *(*all_tests[])() = {
-    test_prototype,
+    // test_prototype,
+    test_exampleFunction,
+    test_exampleFunction2,
     NULL
   };
 

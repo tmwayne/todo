@@ -20,8 +20,13 @@
 
 #include <stdio.h> // printf
 
-void 
-hello() 
+int 
+exampleFunction(int x)
 {
-  printf("Hello, world!\n");
+  if (x == 0) return 0;
+#ifdef TESTING
+  else return -1;
+#else
+  else return 0;
+#endif
 }

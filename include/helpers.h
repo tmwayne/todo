@@ -21,6 +21,6 @@
 #ifndef HELPERS_INCLUDED
 #define HELPERS_INCLUDED
 
-void hello();
+int exampleFunction(int);
 
 #endif // HELPERS_INCLUDED
