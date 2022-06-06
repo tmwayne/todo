@@ -22,8 +22,8 @@ AC_PROG_CC
 
 # Checks for libraries.
 AC_SEARCH_LIBS([dlopen], [dl])
-AC_SEARCH_LIBS([initscr], [ncursesw ncurses])
-AC_SEARCH_LIBS([stdscr], [ncursesw ncurses tinfo])
+AC_SEARCH_LIBS([initscr], [cursesw curses])
+AC_SEARCH_LIBS([stdscr], [cursesw curses term])
 AC_SEARCH_LIBS([sqlite3_open_v2], [sqlite3])
 
 # Checks for header files.

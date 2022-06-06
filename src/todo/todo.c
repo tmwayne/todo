@@ -47,8 +47,9 @@ Options:                                                    \n\
   -v, --version             Print version info              \n\
                                                             \n\
 Commands:                                                   \n\
-  dump    Dump todo list to stdout in tabular form          \n\
-  view    View todo lists and make edits. (default)         \n\
+  create    Create a new todo list                          \n\
+  dump      Dump todo list to stdout in tabular form        \n\
+  view      View todo lists and make edits. (default)       \n\
                                                             \n\
 Run '%s COMMAND --help' for more information on a command.  \n\
 ";
@@ -101,6 +102,9 @@ main(int argc, char **argv)
 
   if (optind == argc || is_arg("view"))
     view();
+
+  // else if (is_arg("create"))
+    // createList();
 
   else if (is_arg("dump"))
     dumpTasks();

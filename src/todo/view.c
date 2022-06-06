@@ -21,9 +21,10 @@
 #include <stdio.h>           // printf, dprintf
 #include <stdlib.h>          // calloc, getenv, srand, rand
 #include <unistd.h>          // unlink, close
-#include <ncurses.h>         // initscr, cbreak, noecho, getch, endwin
+#include <curses.h>          // initscr, cbreak, noecho, getch, endwin
 #include <string.h>          // strdup
 #include <time.h>            // time
+#include <stdbool.h>         // true, false
 #include "error-functions.h" // errMsg
 #include "task.h"            // task_T
 #include "edit.h"            // editTask
@@ -31,47 +32,56 @@
 #include "error-codes.h"     // TD_OK
 #include "view.h"
 
-static task_T dummy_task;
-
-void
-printTask(task_T task)
-{
-  printf(
-    "id:        %d\n"
-    "name:      %s\n"
-    "parent_id: %d\n"
-    "effort:    %s\n"
-    "file_date: %s\n"
-    "due_date:  %s\n",
-    task->id, task->name, task->parent_id, 
-    task->effort, task->file_date, task->due_date
-  );
-}
-
-task_T 
-createTask(char *name)
-{
-  task_T task;
-  task = calloc(1, sizeof(*task));
-  if (task == NULL) errExit("calloc");
-
-  srand(time(NULL));
-
-  task->id        = rand() % 100;
-  task->name      = name;
-  task->parent_id = 0;
-  task->effort    = "L";
-  task->file_date = "2022-05-31";
-  task->due_date  = "2022-07-01";
-
-  return task;
-}
+#define clearStatusLine() do { \
+  move(max_row-1, 0);          \
+  clrtoeol();                  \
+  move(cur_row, cur_col);      \
+} while(0);
 
 int
-drawTask(int row, int col, task_T task)
+viewTaskScreen(task_T *task, list_T updates)
 {
-  mvaddstr(row++, 0, task->name);
-  return row;
+  int row;
+  char c;
+  char buf[16]; // holds a 15 digit char
+
+  do {
+
+    clear();
+    row = 0;
+
+    // TODO: check that there are enough lines on screen
+    snprintf(buf, 16, "%d", (*task)->id);
+    mvaddstr(row++, 0, "id: ");
+    addstr(buf);
+
+    snprintf(buf, 16, "%d", (*task)->parent_id);
+    mvaddstr(row++, 0, "parent_id: ");
+    addstr(buf);
+
+    mvaddstr(row++, 0, "name: ");
+    addstr((*task)->name);
+
+    mvaddstr(row++, 0, "effort: ");
+    addstr((*task)->effort);
+
+    mvaddstr(row++, 0, "file_date: ");
+    addstr((*task)->file_date);
+
+    mvaddstr(row++, 0, "due_date: ");
+    addstr((*task)->due_date);
+
+    refresh();
+    c = getch();
+
+    if (c == 'e') {
+      editTask(task);
+      listAddTask(updates, *task);
+    }
+      
+    else return TD_OK;
+
+  } while (1);
 }
 
 int
@@ -82,8 +92,8 @@ viewListScreen(list_T list)
   int row = 0;
   mvaddstr(row++, 0, "# Task Tracker");
 
-  for (int i=0; i<list->ntasks; i++)
-    row = drawTask(row, 0, list->tasks[i]);
+  for (int i=0; i<list->ntasks; i++, row++)
+    mvaddstr(row, 0, list->tasks[i]->name);
 
   move(row-1, 0);
   refresh();
@@ -166,17 +176,14 @@ moveUp()
   if (cur_row > 0) move(cur_row-1, cur_col);
 }
 
-#define clearStatusLine() do { \
-  move(max_row-1, 0);          \
-  clrtoeol();                  \
-  move(cur_row, cur_col);      \
-} while(0);
-
 void 
 eventLoop()
 {
 
   list_T list = readTasks(); // TODO: should list be an arg?
+
+  // TODO: make updates a hash table so that per session only
+  // one update per task is made
   list_T updates = listNew("updates");
 
   viewListScreen(list);
@@ -184,22 +191,28 @@ eventLoop()
   char c, answer;
   int cur_row, cur_col, max_row, max_col; 
   int save_row, save_col;
+  int status_row;
+  bool redraw = false;
   while ((c = getch())) {
 
     getyx(stdscr, cur_row, cur_col);
     getmaxyx(stdscr, max_row, max_col);
+    status_row = max_row - 1;
 
     clearStatusLine();
 
     switch (c) {
+    
+    // Edit task
     case 'e':
       if (cur_row > 0 && cur_row <= list->ntasks) {
         editTask(&list->tasks[cur_row-1]);
         listAddTask(updates, list->tasks[cur_row-1]);
-        viewListScreen(list);
+        redraw = true;
       }
       break;
 
+    // View help screen
     case 'h':
       if (viewHelpScreen() != TD_OK) {
         endwin();
@@ -208,25 +221,28 @@ eventLoop()
       }
       break;
 
+    // Move cursor down
     case 'j':
       moveDown();
       break;
 
+    // Move cursor up
     case 'k':
       moveUp();
       break;
 
+    // Quick
     case 'q':
       if (updates->ntasks == 0) return;
       else {
-        save_row = cur_row, save_col = cur_col;
-        mvaddstr(max_row-1, 0, "Save changes before quitting? (y/n) ");
+        save_row = cur_row; save_col = cur_col;
+        mvaddstr(status_row, 0, "Save changes before quitting? (y/n) ");
         refresh();
         answer = getch();
         if (answer != 'y') return;
         else if (writeUpdates(updates) == TD_OK) return;
         else {
-          move(max_row-1, 0);
+          move(status_row, 0);
           clrtoeol();
           addstr("Unable to save changes. Quit anyway? (y/n) ");
           refresh();
@@ -237,12 +253,13 @@ eventLoop()
       }
       break;
             
+    // Save changes
     case 's':
-      save_row = cur_row, save_col = cur_col;
-      mvaddstr(max_row-1, 0, "Save changes? (y/n) ");
+      save_row = cur_row; save_col = cur_col;
+      mvaddstr(status_row, 0, "Save changes? (y/n) ");
       refresh();
       answer = getch();
-      move(max_row-1, 0);
+      move(status_row, 0);
       clrtoeol();
       if (answer == 'y') {
         if (writeUpdates(updates) == TD_OK)
@@ -256,8 +273,22 @@ eventLoop()
       move(save_row, save_col);
       break;
 
+    // View task
+    case 'v':
+      save_row = cur_row; save_col = cur_col;
+      if (cur_row > 0 && cur_row <= list->ntasks)
+        viewTaskScreen(&list->tasks[cur_row-1], updates);
+      move(save_row, save_col);
+      redraw = true;
+      break;
+
     default:
       break;
+    }
+
+    if (redraw) {
+      viewListScreen(list);
+      redraw = false;
     }
 
   }

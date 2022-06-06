@@ -20,7 +20,7 @@
 
 #include <stdio.h>           // dprintf, snprintf, fopen
 #include <stdlib.h>          // mkstemp, getenv, calloc, system
-#include <ncurses.h>         // def_prog_mode, endwin, refresh
+#include <curses.h>         // def_prog_mode, endwin, refresh
 #include <string.h>          // getline
 #include "error-functions.h" // errExit, fatal
 #include "error-codes.h"     // TD_OK
@@ -45,7 +45,7 @@ writeTaskToTmpFile(char *template, task_T task)
   if (size < 0) fatal("fprintf");
 }
 
-// TODO: need version when not in view (ncurses) mode
+// TODO: need version when not in view (curses) mode
 void
 editTmpFile(char *pathname)
 {
@@ -135,6 +135,7 @@ replaceTask(task_T *old, task_T new)
   return TD_OK;
 }
 
+// TODO: check if any edit was actually made
 int
 editTask(task_T *task)
 {
