@@ -33,7 +33,7 @@
 #else
 #define sqlErr(fmt, ...) do {               \
     sqlite3_close(db);                      \
-    errExit(fmt __VA_OPT__(,) __VA_ARGS__); \
+    errExit(fmt, ##__VA_ARGS__); \
   } while (0);
 #endif
 
