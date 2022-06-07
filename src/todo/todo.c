@@ -96,7 +96,6 @@ main(int argc, char **argv)
 
   if (optind > argc) usageErr(USAGE, argv[0]);
 
-  // printf("todo: %s\n", argv[optind]);
 #define is_arg(x) (strcmp(argv[optind], (x)) == 0)
 
   if (optind == argc || is_arg("view"))

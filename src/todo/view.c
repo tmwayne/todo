@@ -50,26 +50,18 @@ viewTaskScreen(task_T *task, list_T updates)
     clear();
     row = 0;
 
+#define ADDVAL(key, val) do {       \
+    mvaddstr(row++, 0, key " : ");  \
+    addstr((val));                  \
+  } while (0);
+
     // TODO: check that there are enough lines on screen
-    snprintf(buf, 16, "%d", (*task)->id);
-    mvaddstr(row++, 0, "id: ");
-    addstr(buf);
-
-    snprintf(buf, 16, "%d", (*task)->parent_id);
-    mvaddstr(row++, 0, "parent_id: ");
-    addstr(buf);
-
-    mvaddstr(row++, 0, "name: ");
-    addstr((*task)->name);
-
-    mvaddstr(row++, 0, "effort: ");
-    addstr((*task)->effort);
-
-    mvaddstr(row++, 0, "file_date: ");
-    addstr((*task)->file_date);
-
-    mvaddstr(row++, 0, "due_date: ");
-    addstr((*task)->due_date);
+    ADDVAL("id", taskGet(*task, "id"));
+    ADDVAL("parent_id", taskGet(*task, "parent_id"));
+    ADDVAL("category", taskGet(*task, "category"));
+    ADDVAL("name", taskGet(*task, "name"));
+    ADDVAL("effort", taskGet(*task, "effort"));
+    ADDVAL("priority", taskGet(*task, "priority"));
 
     refresh();
     c = getch();
@@ -93,7 +85,8 @@ viewListScreen(list_T list)
   mvaddstr(row++, 0, "# Task Tracker");
 
   for (int i=0; i<list->ntasks; i++, row++)
-    mvaddstr(row, 0, list->tasks[i]->name);
+    // mvaddstr(row, 0, list->tasks[i]->name);
+    mvaddstr(row, 0, taskGet(list->tasks[i], "name"));
 
   move(row-1, 0);
   refresh();

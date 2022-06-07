@@ -3,45 +3,27 @@
 // mem.h
 // -----------------------------------------------------------------------------
 //
-// Copyright (c) 1994,1995,1996,1997 by David R. Hanson.
+// Copyright (c) 2022 Tyler Wayne
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files (the "Software"), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-// copies of the Software, and to permit persons to whom the Software is 
-// furnished to do so, subject to the following conditions:
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 // 
-// The above copyright notice and this permission notice shall be included in 
-// all copies or substantial portions of the Software.
+//     http://www.apache.org/licenses/LICENSE-2.0
 // 
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
-// 
-// <http://www.opensource.org/licenses/mit-license.php>
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #ifndef MEM_INCLUDED
 #define MEM_INCLUDED
 
-extern void *Mem_alloc(long nbytes);
-extern void *Mem_calloc(long count, long nbytes);
-extern void  Mem_free(void *ptr);
-extern void *Mem_resize(void *ptr, long nbytes);
-
-#define ALLOC(nbytes) Mem_alloc((nbytes))
-#define CALLOC(count, nbytes) Mem_calloc((count), (nbytes))
-
-#define  NEW(p) ((p) = ALLOC((long) sizeof *(p)))
-#define NEW0(p) ((p) = CALLOC(1, (long) sizeof *(p)))
-
-#define FREE(ptr) ((void)(Mem_free((ptr)), (ptr) = 0))
-
-#define RESIZE(ptr, nbytes) ((ptr) = Mem_resize((ptr), (nbytes)))
+extern void *memAlloc(long nbytes);
+extern void *memCalloc(long count, long nbytes);
+extern void *memResize(void *ptr, long nbytes);
+extern void  memFree(void *ptr);
 
 #endif // MEM_INCLUDED

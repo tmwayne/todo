@@ -21,19 +21,34 @@
 drop table if exists default_list;
 
 create table default_list (
-    id int primary key,
-    parent_id int,
+    id char primary key,
+    parent_id char,
+    category text,
     name text not null,
     effort text,
+    priority text,
+    timing text,
     file_date text,
-    due_date text
+    due_date text,
+    status text,
+    next_steps text,
+    description text,
+    keywords text
 );
 
-insert into default_list (id, parent_id, name, effort, file_date, due_date)
+insert into default_list 
 values
-    (2, null, "Write todo", "L", "2022-06-01", "2022-07-01"),
-    (7, 2, "celebrate!", "S", "2022-06-01", "2022-07-01"),
-    (11, 2, "be productive", "S", "2022-06-03", "2022-08-01");
+    (2, null, "Productivity", "Write todo", 
+    "L", "P0", "This week", "2022-06-01", "2022-07-01",
+    "On track", null, null, null),
+
+    (7, 2, "Productivity", "celebrate!", 
+    "S", "P1", "Inbound", "2022-06-01", "2022-07-01",
+    "Yet to start", null, null, null),
+
+    (11, null, "Heidi", "Buy Heidi's bday gifts",
+    "M", "P0", "This week", "2022-06-05", "2022-06-10",
+    "Yet to start", null, null, null);
 
 
 

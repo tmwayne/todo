@@ -21,16 +21,7 @@
 #ifndef TASK_INCLUDED
 #define TASK_INCLUDED
 
-#define TASK_NCOLS 6
-
-typedef struct {
-  int id;
-  int parent_id;
-  char *name;
-  char *effort;
-  char *file_date; 
-  char *due_date; 
-} *task_T;
+typedef struct task_T *task_T;
 
 typedef struct {
   char *name;    // name of list
@@ -40,8 +31,11 @@ typedef struct {
 } *list_T;
 
 extern task_T taskNew();
-extern void taskFree(task_T *);
-extern int taskFromArray(task_T, char **);
+extern int    taskSize(task_T);
+extern void   taskSet(task_T, char *key, char *val);
+extern char  *taskGet(task_T, char *key);
+// extern char  *taskKeys(task_T);
+extern void   taskFree(task_T *);
 
 extern list_T listNew(char *);
 extern void listFree(list_T *);

@@ -78,6 +78,7 @@ readTasks(list_T *list)
 
   int row_ind = 0;
 
+#define TASK_NCOLS 13
   while ((rc = sqlite3_step(stmt)) != SQLITE_DONE) {
 
     if (rc == SQLITE_ERROR)
@@ -96,7 +97,12 @@ readTasks(list_T *list)
     if (task == NULL)
       sqlErr("Failed to allocate new task");
 
-    taskFromArray(task, buf);
+    taskSet(task, "id", buf[0]);
+    taskSet(task, "parent_id", buf[1]);
+    taskSet(task, "category", buf[2]);
+    taskSet(task, "name", buf[3]);
+    taskSet(task, "effort", buf[4]);
+    taskSet(task, "priority", buf[5]);
     listAddTask(*list, task);
 
   }
@@ -115,14 +121,16 @@ updateTask(char *list_name, task_T task)
   int rc;
 
   // TODO: need to guard against SQL injection here
+  // TODO: prepare this query dynamically
   char sql[MAX_SQL_LEN];
   snprintf(sql, MAX_SQL_LEN,
     "update %s          \
-    set parent_id = ?2, \
-      name = ?3,        \
-      effort = ?4,      \
-      file_date = ?5,   \
-      due_date = ?6     \
+    set                 \
+      parent_id   = ?2,   \
+      category    = ?3,   \
+      name        = ?4,   \
+      effort      = ?5,   \
+      priority    = ?6    \
     where id = ?1", 
     list_name);
 
@@ -149,19 +157,22 @@ updateTask(char *list_name, task_T task)
 
   // Need to check if the value before binding it to the SQL statement
 
-#define bind_int(ind, val) do {                               \
+#define BIND_INT(ind, val) do {                               \
   if ((val) == 0)                                             \
     sqlite3_bind_null(stmt, (ind));                           \
   else                                                        \
     sqlite3_bind_int(stmt, (ind), (val));                     \
   } while (0);
 
-  sqlite3_bind_int(stmt, 1, task->id);
-  bind_int(2, task->parent_id);
-  sqlite3_bind_text(stmt, 3, task->name, -1, SQLITE_STATIC);
-  sqlite3_bind_text(stmt, 4, task->effort, -1, SQLITE_STATIC);
-  sqlite3_bind_text(stmt, 5, task->file_date, -1, SQLITE_STATIC);
-  sqlite3_bind_text(stmt, 6, task->due_date, -1, SQLITE_STATIC);
+#define BIND_TEXT(ind, val) \
+  sqlite3_bind_text(stmt, (ind), (val), -1, SQLITE_STATIC);
+
+  BIND_TEXT(1, taskGet(task, "id")); // should never be NULL
+  BIND_TEXT(2, taskGet(task, "parent_id"));
+  BIND_TEXT(3, taskGet(task, "category"));
+  BIND_TEXT(4, taskGet(task, "name"));
+  BIND_TEXT(5, taskGet(task, "effort"));
+  BIND_TEXT(6, taskGet(task, "priority"));
 
   if ((rc = sqlite3_step(stmt)) != SQLITE_DONE)
     sqlErr("Failed to update database: %s", sqlite3_errmsg(db));

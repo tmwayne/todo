@@ -21,44 +21,89 @@
 #include <stdio.h>       // sscanf
 #include <stdlib.h>      // calloc, free
 #include <string.h>      // strdup
+#include "mem.h"         // memCalloc, memFree
 #include "task.h"
 #include "error-codes.h" // TD_OK
+
+typedef struct elem_T {
+  char *key;
+  char *val;
+  struct elem_T *link;
+} *elem_T;
+
+struct task_T {
+  elem_T head;
+};
 
 task_T 
 taskNew() 
 {
   task_T task;
-  task = calloc(1, sizeof(*task));
+  task = memCalloc(1, sizeof(*task));
+  task->head = NULL;
   return task;
 }
 
-void
+int 
+taskSize(task_T task) 
+{
+  if (!task) return -1;
+
+  elem_T elem;
+  int size = 0;
+  for (elem=task->head; elem; elem=elem->link) size++;
+
+  return size;
+}
+
+void 
+taskSet(task_T task, char *key, char *val) 
+{
+  if (!(task && key && val)) return;
+  if (*key == '\0') return;
+
+  elem_T elem;
+
+  for (elem=task->head; elem; elem=elem->link) {
+    if (strcmp(elem->key, key) == 0) {
+      elem->val = val;
+      return;
+    }
+  }
+
+  elem = memCalloc(1, sizeof(*elem));
+  elem->key = strdup(key);
+  elem->val = strdup(val);
+  elem->link = task->head;
+  task->head = elem;
+}
+
+char *
+taskGet(task_T task, char *key) 
+{
+  if (!(task && key)) return NULL;
+
+  for (elem_T elem=task->head; elem; elem=elem->link)
+    if (strcmp(elem->key, key) == 0)
+      return elem->val;
+
+  return NULL;
+}
+
+void 
 taskFree(task_T *task)
 {
   if (!(task && *task)) return;
 
-  free((*task)->name);
-  free((*task)->effort);
-  free((*task)->file_date);
-  free((*task)->due_date);
-  free(*task);
-  *task = NULL;
-}
+  elem_T elem, link;
 
-int
-taskFromArray(task_T task, char **arr)
-{
-  if (arr[0]) sscanf(arr[0], "%d", &task->id);
-  else task->id = 0;
-
-  if (arr[1]) sscanf(arr[1], "%d", &task->parent_id);
-  else task->parent_id = 0;
-  task->name = strdup(arr[2]);
-  task->effort = strdup(arr[3]);
-  task->file_date = strdup(arr[4]);
-  task->due_date = strdup(arr[5]);
-
-  return 0;
+  for (elem=(*task)->head; elem; elem=link) {
+    link = elem->link;
+    memFree(elem->key);
+    memFree(elem->val);
+    memFree(elem);
+  }
+  memFree(*task);
 }
 
 list_T

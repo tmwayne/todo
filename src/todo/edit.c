@@ -36,11 +36,13 @@ writeTaskToTmpFile(char *template, task_T task)
     sysErrExit("mkstemp");
 
   int size = dprintf(fd, 
+    "%s\n"  // category
     "%s\n"  // name
     "%s\n"  // effort
-    "%s\n"  // file_date
-    "%s\n", // due_date
-    task->name, task->effort, task->file_date, task->due_date);
+    "%s\n",  // priority
+
+    taskGet(task, "category"), taskGet(task, "name"),
+    taskGet(task, "effort"), taskGet(task, "priority"));
 
   if (size < 0)
     errExit("Error writing task to temp file");
@@ -88,8 +90,7 @@ checkEditedFile(char *pathname)
 task_T
 parseEditedFile(char *pathname)
 {
-  task_T task = taskNew(NULL);
-  task = calloc(1, sizeof(*task));
+  task_T task = taskNew();
   
   FILE *file = fopen(pathname, "r");
   if (!file) errExit("fopen");
@@ -108,10 +109,10 @@ parseEditedFile(char *pathname)
       buffer[i][nread-1] = '\0';
   }
 
-  task->name = buffer[0];
-  task->effort = buffer[1];
-  task->file_date = buffer[2];
-  task->due_date = buffer[3];
+  taskSet(task, "category", buffer[0]);
+  taskSet(task, "name", buffer[1]);
+  taskSet(task, "effort", buffer[2]);
+  taskSet(task, "priority", buffer[3]);
 
   return task;
 }
@@ -125,10 +126,10 @@ validateEditedTask()
 int
 replaceTask(task_T *old, task_T new)
 {
-  new->id = (*old)->id;
+  taskSet(new, "id", taskGet(*old, "id"));
 
   // TODO: allow parent id to be edited
-  new->parent_id = (*old)->parent_id;
+  taskSet(new, "parent_id", taskGet(*old, "parent_id"));
 
   taskFree(old);
   *old = new;
