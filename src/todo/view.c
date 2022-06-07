@@ -50,18 +50,16 @@ viewTaskScreen(task_T *task, list_T updates)
     clear();
     row = 0;
 
-#define ADDVAL(key, val) do {       \
-    mvaddstr(row++, 0, key " : ");  \
-    addstr((val));                  \
+#define BLANKIFNULL(val) (val) ? (val) : ""
+
+#define ADDVAL(key, val) do {   \
+    mvaddstr(row++, 0, (key) ); \
+    addstr(": ");               \
+    addstr((val));              \
   } while (0);
 
-    // TODO: check that there are enough lines on screen
-    ADDVAL("id", taskGet(*task, "id"));
-    ADDVAL("parent_id", taskGet(*task, "parent_id"));
-    ADDVAL("category", taskGet(*task, "category"));
-    ADDVAL("name", taskGet(*task, "name"));
-    ADDVAL("effort", taskGet(*task, "effort"));
-    ADDVAL("priority", taskGet(*task, "priority"));
+    for (int i=0; i < taskSize(*task); i++)
+      ADDVAL(taskKeyInd(*task, i), BLANKIFNULL(taskValInd(*task, i)));
 
     refresh();
     c = getch();
@@ -84,9 +82,8 @@ viewListScreen(list_T list)
   int row = 0;
   mvaddstr(row++, 0, "# Task Tracker");
 
-  for (int i=0; i<list->ntasks; i++, row++)
-    // mvaddstr(row, 0, list->tasks[i]->name);
-    mvaddstr(row, 0, taskGet(list->tasks[i], "name"));
+  for (int i=0; i < listSize(list); i++, row++)
+    mvaddstr(row, 0, taskGet(listGetTask(list, i), "name"));
 
   move(row-1, 0);
   refresh();
@@ -174,6 +171,7 @@ eventLoop()
 {
 
   list_T list = NULL;
+  task_T task;
   readTasks(&list); 
 
   // TODO: make updates a hash table so that per session only
@@ -199,9 +197,10 @@ eventLoop()
     
     // Edit task
     case 'e':
-      if (cur_row > 0 && cur_row <= list->ntasks) {
-        editTask(&list->tasks[cur_row-1]);
-        listAddTask(updates, list->tasks[cur_row-1]);
+      if (cur_row > 0 && cur_row <= listSize(list)) {
+        task = listGetTask(list, cur_row-1);
+        editTask(&task);
+        listAddTask(updates, task);
         redraw = true;
       }
       break;
@@ -227,7 +226,7 @@ eventLoop()
 
     // Quick
     case 'q':
-      if (updates->ntasks == 0) return;
+      if (listSize(updates) == 0) return;
       else {
         save_row = cur_row; save_col = cur_col;
         mvaddstr(status_row, 0, "Save changes before quitting? (y/n) ");
@@ -257,7 +256,6 @@ eventLoop()
       clrtoeol();
       if (answer == 'y') {
         if (writeUpdates(updates) == TD_OK)
-          // mvaddstr(max_row-1, 0, "Changes successfully saved to backend.");
           addstr("Changes successfully saved to backend.");
         else
           addstr("Unable to save changes to backend.");
@@ -270,8 +268,10 @@ eventLoop()
     // View task
     case 'v':
       save_row = cur_row; save_col = cur_col;
-      if (cur_row > 0 && cur_row <= list->ntasks)
-        viewTaskScreen(&list->tasks[cur_row-1], updates);
+      if (cur_row > 0 && cur_row <= listSize(list)) {
+        task = listGetTask(list, cur_row-1);
+        viewTaskScreen(&task, updates);
+      }
       move(save_row, save_col);
       redraw = true;
       break;

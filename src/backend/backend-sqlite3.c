@@ -21,6 +21,7 @@
 #include <stdio.h>           // fprintf
 #include <stdlib.h>          // NULL
 #include <string.h>          // strlen
+#include <stdbool.h>         // false
 #include <sqlite3.h>
 #include "task.h"            // task_T
 #include "error-codes.h"
@@ -53,7 +54,7 @@ readTasks(list_T *list)
 
   // TODO: need to guard against SQL injection here
   char sql[BUF_LEN];
-  snprintf(sql, BUF_LEN, "select * from %s", (*list)->name);
+  snprintf(sql, BUF_LEN, "select * from %s", listName(*list));
 
   rc = sqlite3_open_v2(
     FILENAME,              // filename
@@ -76,33 +77,21 @@ readTasks(list_T *list)
   if (rc != SQLITE_OK) 
     sqlErr("Unable to prepare SQL for fetching tasks: %s", sqlite3_errmsg(db));
 
-  int row_ind = 0;
+  int ncols = sqlite3_column_count(stmt);
 
-#define TASK_NCOLS 13
   while ((rc = sqlite3_step(stmt)) != SQLITE_DONE) {
 
     if (rc == SQLITE_ERROR)
       sqlErr("Unable to fetch tasks: %s", sqlite3_errmsg(db));
 
-    // Skip corrupted entries
-    // TODO: do we want to throw an error instead?
-    int ncols = sqlite3_column_count(stmt);
-    if (ncols != TASK_NCOLS) continue;
-
-    char *buf[TASK_NCOLS];
-    for (int i=0; i<TASK_NCOLS; i++)
-      buf[i] = (char *) sqlite3_column_text(stmt, i);
-
     task_T task = taskNew();
     if (task == NULL)
       sqlErr("Failed to allocate new task");
 
-    taskSet(task, "id", buf[0]);
-    taskSet(task, "parent_id", buf[1]);
-    taskSet(task, "category", buf[2]);
-    taskSet(task, "name", buf[3]);
-    taskSet(task, "effort", buf[4]);
-    taskSet(task, "priority", buf[5]);
+    for (int i=0; i<ncols; i++)
+      taskSet(task, sqlite3_column_name(stmt, i), 
+        (char *) sqlite3_column_text(stmt, i));
+
     listAddTask(*list, task);
 
   }
@@ -189,10 +178,10 @@ writeUpdates(list_T updates)
 {
   if (updates == NULL) return -1; // TODO: return error code
 
-  for (int i=0; i < updates->ntasks; i++)
-    if (updateTask(updates->name, updates->tasks[i]) != TD_OK) return -1;
+  for (int i=0; i < listSize(updates); i++)
+    if (updateTask(listName(updates), listGetTask(updates, i)) != TD_OK) return -1;
 
-  updates->ntasks = 0;
+  listClearTasks(updates, false);
 
   return TD_OK;
 
@@ -201,9 +190,6 @@ writeUpdates(list_T updates)
 int
 dumpTasks()
 {
-
-  // char command[BUF_LEN];
-
   char command[] = "sqlite3 -header test/data/test-db.sqlite3 'select * from default_list'";
 
   int status = system(command);

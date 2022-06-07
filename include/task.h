@@ -21,24 +21,33 @@
 #ifndef TASK_INCLUDED
 #define TASK_INCLUDED
 
-typedef struct task_T *task_T;
+#include <stdbool.h> // bool
 
-typedef struct {
-  char *name;    // name of list
-  int len;       // length of tasks array
-  int ntasks;    // number of tasks
-  task_T *tasks; // tasks array
-} *list_T;
+typedef struct task_T *task_T;
+typedef struct list_T *list_T;
 
 extern task_T taskNew();
-extern int    taskSize(task_T);
-extern void   taskSet(task_T, char *key, char *val);
-extern char  *taskGet(task_T, char *key);
-// extern char  *taskKeys(task_T);
-extern void   taskFree(task_T *);
+extern int    taskSize(const task_T);
 
-extern list_T listNew(char *);
-extern void listFree(list_T *);
-extern int listAddTask(list_T, task_T);
+/**
+ * Sets the value of given key, which can't be NULL. If the key already exists
+ * then the memory help by val is first free, then it is set to the new value.
+ * If val is NULL, the the value is set to NULL.
+ */
+extern void   taskSet(task_T, const char *key, const char *val);
+extern char  *taskGet(task_T, const char *key);
+extern char  *taskValInd(const task_T task, const int ind);
+extern char  *taskKeyInd(const task_T task, const int ind);
+extern void   taskFree(task_T *);
+extern int    taskValidate(const task_T); // TODO: write this
+
+extern list_T listNew(const char *);
+extern int    listAddTask(list_T, const task_T);
+extern int    listAddKey(list_T, const char *);
+extern task_T listGetTask(const list_T, const int ind);
+extern char  *listName(const list_T);
+extern int    listClearTasks(list_T, bool free_tasks);
+extern void   listFree(list_T *);
+extern int    listSize(const list_T);
 
 #endif // TASK_INCLUDED
