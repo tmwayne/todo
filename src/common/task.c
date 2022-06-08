@@ -23,8 +23,8 @@
 #include <string.h>      // strdup
 #include <stdbool.h>     // bool, true, false
 #include "mem.h"         // memCalloc, memFree
-#include "task.h"
 #include "error-codes.h" // TD_OK
+#include "task.h"
 
 struct elem_T {
   char *key;
@@ -148,6 +148,16 @@ taskKeyInd(const task_T task, const int ind)
   return elemKey(taskElemInd(task, ind));
 }
 
+int
+taskCheckKeys(const task_T task)
+{
+  for (int i=0; required_keys[i]; i++)
+    if (taskGet(task, required_keys[i]) == NULL)
+      return 0;
+
+  return 1;
+}
+
 void 
 taskFree(task_T *task)
 {
@@ -179,6 +189,14 @@ listNew(const char *name)
     return NULL;
   }
 
+  list->keys_len = 8;
+  list->keys = calloc(8, sizeof(char *));
+  if (list->keys == NULL) {
+    free(list->tasks);
+    free(list);
+    return NULL;
+  }
+
   return list;
 }
 
@@ -204,7 +222,8 @@ listAddTask(list_T list, const task_T task)
 {
   if (list->ntasks >= list->tasks_len) {
     list->tasks_len <<= 1;
-    task_T *ptr = realloc(list->tasks, list->tasks_len);
+    // task_T *ptr = realloc(list->tasks, list->tasks_len);
+    task_T *ptr = reallocarray(list->keys, list->keys_len, sizeof(char *));
     if (ptr == NULL) return -1; // TODO: return error code
     else list->tasks = ptr;
   }
@@ -219,7 +238,7 @@ listAddKey(list_T list, const char *key)
 {
   if (list->nkeys >= list->keys_len) {
     list->keys_len <<= 1;
-    char **ptr = realloc(list->keys, list->keys_len);
+    char **ptr = reallocarray(list->keys, list->keys_len, sizeof(char *));
     if (ptr == NULL) return -1; // TODO: return error code
     else list->keys = ptr;
   }
@@ -249,6 +268,16 @@ listKeySize(const list_T list)
   if (!list) return -1; // TODO: return error code
   else return list->nkeys;
 }
+
+int
+listContainsKey(const list_T list, const char *key)
+{
+  for (int i=0; i < listKeySize(list); i++)
+    if (strcmp(list->keys[i], key) == 0) return 1;
+
+  return 0;
+}
+  
 
 task_T
 listGetTask(const list_T list, const int ind)

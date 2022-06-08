@@ -65,10 +65,11 @@ viewTaskScreen(list_T list, task_T task, list_T updates)
     c = getch();
 
     if (c == 'e') {
-      task_T edited_task = editTask(task);
-      listUpdateTask(list, edited_task);
-      listAddTask(updates, edited_task);
-      task = edited_task;
+      if (editTask(list, &task) != TD_OK) {
+        endwin();
+        errExit("Failed editing task");
+      }
+      listAddTask(updates, task);
     }
       
     else return TD_OK;
@@ -200,9 +201,11 @@ eventLoop()
     case 'e':
       if (cur_row > 0 && cur_row <= listSize(list)) {
         task = listGetTask(list, cur_row-1);
-        task_T edited_task = editTask(task);
-        listUpdateTask(list, edited_task);
-        listAddTask(updates, edited_task);
+        if (editTask(list, &task) != TD_OK) {
+          endwin();
+          errExit("Failed editing task");
+        }
+        listAddTask(updates, task);
         redraw = true;
       }
       break;
