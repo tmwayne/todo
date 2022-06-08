@@ -38,8 +38,8 @@
   move(cur_row, cur_col);      \
 } while(0);
 
-int
-viewTaskScreen(task_T *task, list_T updates)
+static int
+viewTaskScreen(list_T list, task_T task, list_T updates)
 {
   int row;
   char c;
@@ -58,15 +58,17 @@ viewTaskScreen(task_T *task, list_T updates)
     addstr((val));              \
   } while (0);
 
-    for (int i=0; i < taskSize(*task); i++)
-      ADDVAL(taskKeyInd(*task, i), BLANKIFNULL(taskValInd(*task, i)));
+    for (int i=0; i < taskSize(task); i++)
+      ADDVAL(taskKeyInd(task, i), BLANKIFNULL(taskValInd(task, i)));
 
     refresh();
     c = getch();
 
     if (c == 'e') {
-      editTask(task);
-      listAddTask(updates, *task);
+      task_T edited_task = editTask(task);
+      listUpdateTask(list, edited_task);
+      listAddTask(updates, edited_task);
+      task = edited_task;
     }
       
     else return TD_OK;
@@ -135,13 +137,12 @@ viewHelpScreen()
   if (fd == -1) return -1; // TODO: return error code
 
   if (dprintf(fd, "%s", help) < 0) return -1;
-  if (pageHelp(filename) != TD_OK) return -1;
-
-  unlink(filename);
   if (close(fd) == -1) return -1; // TODO: return error code
+
+  if (pageHelp(filename) != TD_OK) return -1;
+  unlink(filename);
   
   return TD_OK;
-  
 }
 
 void
@@ -199,8 +200,9 @@ eventLoop()
     case 'e':
       if (cur_row > 0 && cur_row <= listSize(list)) {
         task = listGetTask(list, cur_row-1);
-        editTask(&task);
-        listAddTask(updates, task);
+        task_T edited_task = editTask(task);
+        listUpdateTask(list, edited_task);
+        listAddTask(updates, edited_task);
         redraw = true;
       }
       break;
@@ -270,7 +272,7 @@ eventLoop()
       save_row = cur_row; save_col = cur_col;
       if (cur_row > 0 && cur_row <= listSize(list)) {
         task = listGetTask(list, cur_row-1);
-        viewTaskScreen(&task, updates);
+        viewTaskScreen(list, task, updates);
       }
       move(save_row, save_col);
       redraw = true;

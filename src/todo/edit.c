@@ -20,36 +20,39 @@
 
 #include <stdio.h>           // dprintf, snprintf, fopen
 #include <stdlib.h>          // mkstemp, getenv, calloc, system
-#include <curses.h>         // def_prog_mode, endwin, refresh
+#include <unistd.h>          // unlink
+#include <curses.h>          // def_prog_mode, endwin, refresh
 #include <string.h>          // getline
+#include <ctype.h>           // isspace
+#include <errno.h>           // errno
 #include "error-functions.h" // errExit, fatal
 #include "error-codes.h"     // TD_OK
-#include "task.h"
+#include "task.h"            // elem_T
 
-void
+static int
 writeTaskToTmpFile(char *template, task_T task)
 {
   int fd;
 
   fd = mkstemp(template);
-  if (fd == -1)
-    sysErrExit("mkstemp");
+  if (fd == -1) return -1; // TODO: return error code
 
-  int size = dprintf(fd, 
-    "%s\n"  // category
-    "%s\n"  // name
-    "%s\n"  // effort
-    "%s\n",  // priority
+  for (int i=0; i < taskSize(task); i++) {
+    elem_T elem = taskElemInd(task, i);
+    if (strcmp(elemKey(elem), "id") == 0) continue;
+    int size = dprintf(fd, "%s: %s\n", elemKey(elem), elemVal(elem));
+    if (size < 0)
+      errExit("Error writing task to temp file");
+  }
 
-    taskGet(task, "category"), taskGet(task, "name"),
-    taskGet(task, "effort"), taskGet(task, "priority"));
+  if (close(fd) == -1) return -1; // TODO: return error code
 
-  if (size < 0)
-    errExit("Error writing task to temp file");
+  return TD_OK;
+
 }
 
 // TODO: need version when not in view (curses) mode
-void
+static int
 editTmpFile(char *pathname)
 {
   char *editor = getenv("EDITOR");
@@ -78,43 +81,75 @@ editTmpFile(char *pathname)
 
   refresh(); // restore save modes, repaint screen
 
-  return;
+  return TD_OK;
 }
 
-void
-checkEditedFile(char *pathname)
+static int
+trim(char **buf, ssize_t *len)
 {
-  return;
+  // TODO: add error checking
+  while (isspace((unsigned char) (*buf)[(*len)-1])) {
+    (*buf)[(*len)-1] = '\0';
+    (*len)--;
+  }
+
+  while (isspace((unsigned char) *(*buf))) {
+    (*buf)++;
+    (*len)--;
+  }
+
+  return 0;
 }
 
-task_T
-parseEditedFile(char *pathname)
+static int
+parseEditedFile(char *pathname, task_T task)
 {
-  task_T task = taskNew();
-  
   FILE *file = fopen(pathname, "r");
   if (!file) errExit("fopen");
 
-#define STRUCT_ELEM 4
-  char *buffer[STRUCT_ELEM] = {0};
+  char *buf = NULL;
   size_t len = 0;
-  int nread;
+  ssize_t nread;
 
-  for (int i=0; i < STRUCT_ELEM; i++) {
-    nread = getline(&buffer[i], &len, file);
-    if (nread == -1)
-      sysErrExit("getline");
+  int row = 0;
+  errno = 0;
+  while ((nread = getline(&buf, &len, file)) > 0) {
 
-    if (buffer[i][nread-1] == '\n')
-      buffer[i][nread-1] = '\0';
+    char *key = buf;
+    char *val;
+    trim(&key, &nread);
+
+    if (nread == 0) continue; // Skip if line is only whitespace
+
+    val = strchr(key, ':');
+    if (val == NULL) {
+      free(buf);
+      errno = -1;
+      break;
+    }
+
+    *val++ = '\0';
+    if (*val == ' ') *val++ = '\0';
+
+    taskSet(task, key, val);
+
+    // Free memory allocated by getline and reset for next line parse
+    free(buf);
+    buf = NULL;
+    len = 0;
+
+    row++;
+    errno = 0;
   }
 
-  taskSet(task, "category", buffer[0]);
-  taskSet(task, "name", buffer[1]);
-  taskSet(task, "effort", buffer[2]);
-  taskSet(task, "priority", buffer[3]);
+  fclose(file);
 
-  return task;
+  if (errno != 0) {
+    taskFree(&task);
+    return -1; // TODO: return error code
+  }
+
+  return TD_OK;
 }
 
 int
@@ -123,45 +158,31 @@ validateEditedTask()
   return TD_OK;
 }
 
-int
-replaceTask(task_T *old, task_T new)
-{
-  taskSet(new, "id", taskGet(*old, "id"));
-
-  // TODO: allow parent id to be edited
-  taskSet(new, "parent_id", taskGet(*old, "parent_id"));
-
-  taskFree(old);
-  *old = new;
-
-  return TD_OK;
-}
-
 // TODO: check if any edit was actually made
-int
-editTask(task_T *task)
+task_T
+editTask(task_T task)
 {
-  // Write task to temp file
+  task_T edited_task = taskNew();
+  taskSet(edited_task, "id", taskGet(task, "id"));
+
   char pathname[] = "/tmp/task-XXXXXX";
-  writeTaskToTmpFile(pathname, *task);
+  if (writeTaskToTmpFile(pathname, task) != TD_OK)
+    errExit("Error writing task to temporary file");
 
-  // Open temp file in editor 
-  editTmpFile(pathname);
+  if (editTmpFile(pathname) != TD_OK)
+    errExit("Error editing temporary task file");
 
-  // Check validity of temporary file
-  checkEditedFile(pathname);
+  if (parseEditedFile(pathname, edited_task) != TD_OK)
+    errExit("Error parsing temporary task file");
 
-  // Update results from temporary file
-  task_T edited_task = parseEditedFile(pathname);
+  unlink(pathname);
 
   // TODO: 
   validateEditedTask();
 
   // TODO: do we write the task to file before overwriting existing task?
   
-  replaceTask(task, edited_task);
-  
-  return TD_OK;
+  return edited_task;
   
 }
 

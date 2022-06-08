@@ -23,6 +23,8 @@
 
 #include "task.h" // task_T
 
-extern int editTask(task_T *);
+// extern int editTask(task_T *);
+// extern int editTask(task_T);
+extern task_T editTask(task_T);
 
 #endif // TD_EDIT_INCLUDED

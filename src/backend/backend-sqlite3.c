@@ -79,6 +79,9 @@ readTasks(list_T *list)
 
   int ncols = sqlite3_column_count(stmt);
 
+  // for (int i=0; i < ncols; i++)
+    // listAddKey(*list, sqlite3_column_name(stmt, i));
+
   while ((rc = sqlite3_step(stmt)) != SQLITE_DONE) {
 
     if (rc == SQLITE_ERROR)

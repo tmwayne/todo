@@ -26,11 +26,11 @@
 #include "task.h"
 #include "error-codes.h" // TD_OK
 
-typedef struct elem_T {
+struct elem_T {
   char *key;
   char *val;
   struct elem_T *link;
-} *elem_T;
+};
 
 struct task_T {
   elem_T head;
@@ -110,7 +110,7 @@ taskGet(const task_T task, const char *key)
   return NULL;
 }
 
-static elem_T
+elem_T
 taskElemInd(const task_T task, const int ind)
 {
   if (taskSize(task) == 0 || ind >= taskSize(task))
@@ -123,17 +123,29 @@ taskElemInd(const task_T task, const int ind)
 }
 
 char *
+elemKey(const elem_T elem)
+{
+  if (!elem) return NULL;
+  else return elem->key;
+}
+
+char *
+elemVal(const elem_T elem)
+{
+  if (!elem) return NULL;
+  else return elem->val;
+}
+
+char *
 taskValInd(const task_T task, const int ind)
 {
-  elem_T elem = taskElemInd(task, ind);
-  return elem ? elem->val : NULL;
+  return elemVal(taskElemInd(task, ind));
 }
 
 char *
 taskKeyInd(const task_T task, const int ind)
 {
-  elem_T elem = taskElemInd(task, ind);
-  return elem ? elem->key : NULL;
+  return elemKey(taskElemInd(task, ind));
 }
 
 void 
@@ -213,6 +225,8 @@ listAddKey(list_T list, const char *key)
   }
 
   list->keys[list->nkeys++] = strdup(key);
+
+  return TD_OK;
 }
 
 char *
@@ -244,6 +258,20 @@ listGetTask(const list_T list, const int ind)
 }
 
 int
+listUpdateTask(list_T list, const task_T task)
+{
+
+  if (!(list && task)) return -1; // TODO: return error code
+  char *id = taskGet(task, "id");
+  int i;
+  for ( i=0; i < listSize(list); i++)
+    if (strcmp(taskGet(list->tasks[i], "id"), id) == 0) break;
+
+  taskFree(&list->tasks[i]);
+  list->tasks[i] = task;
+}
+
+int
 listClearTasks(list_T list, bool free_tasks)
 {
   if (!list) return -1; // TODO: return error code
@@ -252,7 +280,6 @@ listClearTasks(list_T list, bool free_tasks)
     for (int i=0; i < listSize(list); i++) {
       task_T task = listGetTask(list, i);
       taskFree(&task);
-      // taskFree(&listGetTask(list, i));
     }
 
   list->ntasks = 0;
