@@ -31,12 +31,14 @@
 #include "backend-sqlite3.h" // readTasks
 #include "error-codes.h"     // TD_OK
 #include "view.h"
+#include "screen.h"
 
 #define clearStatusLine() do { \
   move(max_row-1, 0);          \
   clrtoeol();                  \
   move(cur_row, cur_col);      \
 } while(0);
+
 
 static int
 viewTaskScreen(list_T list, task_T task, list_T updates)
@@ -64,12 +66,14 @@ viewTaskScreen(list_T list, task_T task, list_T updates)
     refresh();
     c = getch();
 
+    // TODO: add task to updated tasks
+    // TODO: this doesn't render the edited task
     if (c == 'e') {
-      if (editTask(list, &task) != TD_OK) {
+      if (editTask(list, task) != TD_OK) {
         endwin();
         errExit("Failed editing task");
       }
-      listAddTask(updates, task);
+      // listAddTask(updates, task);
     }
       
     else return TD_OK;
@@ -77,24 +81,59 @@ viewTaskScreen(list_T list, task_T task, list_T updates)
   } while (1);
 }
 
-int
-viewListScreen(list_T list)
+static int
+viewListScreen(screen_T screen, list_T list)
 {
   clear();
+  
+  // TODO: need to check line count
+  // TODO: add ability to hide lines
 
   int row = 0;
-  mvaddstr(row++, 0, "# Task Tracker");
+  // mvaddstr(row++, 0, "# Task Tracker");
 
-  for (int i=0; i < listSize(list); i++, row++)
-    mvaddstr(row, 0, taskGet(listGetTask(list, i), "name"));
+  line_T first_line = screenGetFirstLine(screen);
+  line_T line = first_line;
 
-  move(row-1, 0);
-  refresh();
+  for (line_T line=first_line; line; line=lineGetNext(line)) {
+    char *val;
+    int level = lineLevel(line);
+    if (level < 0) return -1; // TODO: return error code
+    switch (lineType(line)) {
+    case LT_STR:
+      val = (char *) lineObj(line);
+      break;
+
+    case LT_CAT:
+      val = catName((cat_T) lineObj(line));
+      break;
+
+    case LT_TASK:
+      val = taskGet((task_T) lineObj(line), "name");
+      break;
+
+    default:
+      return -1;
+    }
+
+    move(row, 0);
+    if (level == 0) addstr("[");
+    else {
+      for (int i=level; i>0; i--) 
+        if (i == 1) addstr(". ");
+        else addstr("  ");
+    }
+
+    addstr(val);
+    if (level == 0) addstr("]");
+
+    row++;
+  }
 
   return TD_OK;
 }
 
-int
+static int
 pageHelp(char *filename)
 {
   char *pager = getenv("PAGER");
@@ -125,7 +164,7 @@ pageHelp(char *filename)
   return TD_OK;
 }
 
-int
+static int
 viewHelpScreen()
 {
 
@@ -146,41 +185,62 @@ viewHelpScreen()
   return TD_OK;
 }
 
-void
-moveDown()
+// TODO: rerender if at end of window but screen isn't exhausted
+static int
+moveDown(const screen_T screen, line_T *line)
 {
   int cur_row, cur_col, max_row, max_col;
 
   getyx(stdscr, cur_row, cur_col);
   getmaxyx(stdscr, max_row, max_col);
 
-  if (cur_row < max_row) move(cur_row+1, cur_col);
+  line_T next = lineGetNext(*line);
+
+  if (cur_row < max_row && next) {
+    move(cur_row+1, cur_col);
+    *line = next;
+  }
+
+  return TD_OK;
 }
     
-void
-moveUp()
+static int
+moveUp(const screen_T screen, line_T *line)
 {
   int cur_row, cur_col, max_row, max_col;
 
   getyx(stdscr, cur_row, cur_col);
   getmaxyx(stdscr, max_row, max_col);
 
-  if (cur_row > 0) move(cur_row-1, cur_col);
+  line_T prev = lineGetPrev(*line);
+
+  if (cur_row > 0 && prev) {
+    move(cur_row-1, cur_col);
+    *line = prev;
+  }
+
+  return TD_OK;
 }
 
-void 
+static void 
 eventLoop()
 {
 
+  screen_T screen = screenNew();
   list_T list = NULL;
   task_T task;
+
   readTasks(&list); 
+  screenInitialize(screen, list);
 
   // TODO: make updates a hash table so that per session only
   // one update per task is made
   list_T updates = listNew("default_list");
 
-  viewListScreen(list);
+  viewListScreen(screen, list);
+  line_T line = screenGetFirstLine(screen);
+  move(0, 0);
+  refresh();
 
   char c, answer;
   int cur_row, cur_col, max_row, max_col; 
@@ -199,13 +259,15 @@ eventLoop()
     
     // Edit task
     case 'e':
-      if (cur_row > 0 && cur_row <= listSize(list)) {
-        task = listGetTask(list, cur_row-1);
-        if (editTask(list, &task) != TD_OK) {
+      if (lineType(line) == LT_TASK) {
+        getyx(stdscr, save_row, save_col);
+        task_T edited_task = (task_T) lineObj(line);
+        // TODO: this doesn't update the original list or the screen
+        if (editTask(list, edited_task) != TD_OK) {
           endwin();
           errExit("Failed editing task");
         }
-        listAddTask(updates, task);
+        // listAddTask(updates, task);
         redraw = true;
       }
       break;
@@ -221,16 +283,18 @@ eventLoop()
 
     // Move cursor down
     case 'j':
-      moveDown();
+      moveDown(screen, &line);
       break;
 
     // Move cursor up
     case 'k':
-      moveUp();
+      moveUp(screen, &line);
       break;
 
-    // Quick
+    // Quit
     case 'q':
+      return;
+      /*
       if (listSize(updates) == 0) return;
       else {
         save_row = cur_row; save_col = cur_col;
@@ -250,7 +314,9 @@ eventLoop()
         }
       }
       break;
+        */
             
+    /*
     // Save changes
     case 's':
       save_row = cur_row; save_col = cur_col;
@@ -269,24 +335,32 @@ eventLoop()
       refresh();
       move(save_row, save_col);
       break;
+    */
 
     // View task
     case 'v':
-      save_row = cur_row; save_col = cur_col;
-      if (cur_row > 0 && cur_row <= listSize(list)) {
-        task = listGetTask(list, cur_row-1);
-        viewTaskScreen(list, task, updates);
+      if (lineType(line) == LT_TASK) {
+        getyx(stdscr, save_row, save_col);
+        
+        // TODO: check if task was edited
+        // TODO: the category of a task can be edited
+        // which could cause misalignment between the line and the cursor.
+        // check for this
+        viewTaskScreen(list, (task_T) lineObj(line), updates);
+        redraw = true;
       }
-      move(save_row, save_col);
-      redraw = true;
       break;
 
     default:
       break;
+
     }
 
     if (redraw) {
-      viewListScreen(list);
+      screenReset(&screen, list);
+      viewListScreen(screen, list);
+      line = screenGetFirstLine(screen);
+      move(0, 0);
       redraw = false;
     }
 

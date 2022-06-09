@@ -156,26 +156,26 @@ parseEditedFile(char *pathname, task_T task)
 static int
 validateEditedTask(list_T list, task_T task)
 {
-  if (!taskCheckKeys(task)) return 0;
+  if (taskCheckKeys(task) != TD_OK) return -1;
 
   for (int i=0; i < taskSize(task); i++) {
     elem_T elem = taskElemInd(task, i);
-    if (!listContainsKey(list, elemKey(elem))) return 0;
+    if (!listContainsKey(list, elemKey(elem))) return -1;
   }
 
-  return 1; // TODO: return error codes to make more informative
+  return TD_OK;
 }
 
 // TODO: check if any edit was actually made
 // TODO: throw the appropriate error codes here
 int
-editTask(list_T list, task_T *task)
+editTask(list_T list, task_T task)
 {
   task_T edited_task = taskNew();
-  taskSet(edited_task, "id", taskGet(*task, "id"));
+  taskSet(edited_task, "id", taskGet(task, "id"));
 
   char pathname[] = "/tmp/task-XXXXXX";
-  if (writeTaskToTmpFile(pathname, *task) != TD_OK)
+  if (writeTaskToTmpFile(pathname, task) != TD_OK)
     return -1;
 
   if (editTmpFile(pathname) != TD_OK)
@@ -186,7 +186,7 @@ editTask(list_T list, task_T *task)
 
   unlink(pathname);
 
-  if (!validateEditedTask(list, edited_task))
+  if (validateEditedTask(list, edited_task) != TD_OK)
     return -1;
 
   listUpdateTask(list, edited_task);

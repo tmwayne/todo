@@ -25,12 +25,8 @@
 
 typedef struct elem_T *elem_T;
 typedef struct task_T *task_T;
+typedef struct cat_T  *cat_T;
 typedef struct list_T *list_T;
-
-/**
- * These keys must be present for the program to function correctly.
- */
-static char *required_keys[] = { "id", "parent_id", "category", "name", NULL };
 
 extern task_T taskNew();
 extern int    taskSize(const task_T);
@@ -41,25 +37,36 @@ extern int    taskSize(const task_T);
  * If val is NULL, the the value is set to "". For both the key and val,
  * the arguments are copied.
  */
-extern void   taskSet(task_T, const char *key, const char *val);
-extern char  *taskGet(task_T, const char *key);
-extern elem_T taskElemInd(const task_T task, const int ind);
-extern char  *elemKey(const elem_T);
-extern char  *elemVal(const elem_T);
-extern char  *taskValInd(const task_T task, const int ind);
-extern char  *taskKeyInd(const task_T task, const int ind);
-extern void   taskFree(task_T *);
-extern int    taskCheckKeys(const task_T);
+extern void    taskSet(task_T, const char *key, const char *val);
+extern char   *taskGet(task_T, const char *key);
+extern elem_T  taskElemInd(const task_T task, const int ind);
+extern char   *elemKey(const elem_T);
+extern char   *elemVal(const elem_T);
+extern char   *taskValInd(const task_T task, const int ind);
+extern char   *taskKeyInd(const task_T task, const int ind);
+extern void    taskFree(task_T *);
+extern int     taskCheckKeys(const task_T);
+extern int     taskUpdate(task_T old, task_T new);
+
+// TODO: this is bad design. It's hard to hard the tree structure but
+// also allow for easy navigation. Redesign this.
+// TODO: returning pointers to tasks seems really dangerous. Refactor this.
+extern task_T  taskGetSubtask(const task_T);
+extern task_T  taskGetNext(const task_T);
+
+extern char   *catName(const cat_T);
+extern task_T  catGetTask(const cat_T);
+extern cat_T   catGetNext(const cat_T);
 
 extern list_T listNew(const char *);
 extern int    listAddTask(list_T, const task_T);
 extern int    listAddKey(list_T, const char *key);
 extern int    listContainsKey(const list_T, const char *key);
-extern task_T listGetTask(const list_T, const int ind);
-extern int    listUpdateTask(list_T, const task_T);
 extern char  *listName(const list_T);
-extern int    listClearTasks(list_T, bool free_tasks);
 extern void   listFree(list_T *);
-extern int    listSize(const list_T);
+extern int    listNumTasks(const list_T);
+extern int    listNumCats(const list_T);
+extern cat_T  listGetCat(const list_T);
+extern int    listUpdateTask(list_T, task_T);
 
 #endif // TASK_INCLUDED

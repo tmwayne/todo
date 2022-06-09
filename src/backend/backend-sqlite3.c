@@ -176,6 +176,7 @@ updateTask(char *list_name, task_T task)
 
 }
 
+/*
 int
 writeUpdates(list_T updates)
 {
@@ -189,6 +190,7 @@ writeUpdates(list_T updates)
   return TD_OK;
 
 }
+*/
 
 int
 dumpTasks()
