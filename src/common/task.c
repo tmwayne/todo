@@ -366,7 +366,7 @@ listAddKey(list_T list, const char *key)
 {
   if (list->nkeys >= list->keys_len) {
     list->keys_len <<= 1;
-    char **ptr = reallocarray(list->keys, list->keys_len, sizeof(char *));
+    char **ptr = realloc(list->keys, list->keys_len * sizeof(char *));
     if (ptr == NULL) return -1; // TODO: return error code
     else list->keys = ptr;
   }
