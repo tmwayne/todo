@@ -33,13 +33,7 @@
 #include "view.h"
 #include "screen.h"
 
-#define clearStatusLine() do { \
-  move(max_row-1, 0);          \
-  clrtoeol();                  \
-  move(cur_row, cur_col);      \
-} while(0);
-
-
+// TODO: enable vertical movement of the cursor
 static int
 viewTaskScreen(list_T list, task_T task)
 {
@@ -78,6 +72,7 @@ viewTaskScreen(list_T list, task_T task)
   } while (1);
 }
 
+// TODO: hide categories whose tasks are all complete
 static int
 viewListScreen(screen_T screen, list_T list)
 {
@@ -220,6 +215,20 @@ moveUp(const screen_T screen, line_T *line)
   return TD_OK;
 }
 
+#define clearStatusLine() do { \
+  move(max_row-1, 0);          \
+  clrtoeol();                  \
+  move(cur_row, cur_col);      \
+} while (0);
+
+#define statusMessage(str) do { \
+  move(status_row, 0);          \
+  clrtoeol();                   \
+  addstr((str));                \
+  refresh();                    \
+} while (0);
+
+
 static void 
 eventLoop()
 {
@@ -267,8 +276,7 @@ eventLoop()
     case 'h':
       if (viewHelpScreen() != TD_OK) {
         endwin();
-        fprintf(stderr, "Error opening help\n");
-        exit(EXIT_FAILURE);
+        errExit("Failed opening help");
       }
       break;
 
@@ -286,17 +294,13 @@ eventLoop()
     case 'q':
       if (listNumUpdates(list) == 0) return;
       else {
-        save_row = cur_row; save_col = cur_col;
-        mvaddstr(status_row, 0, "Save changes before quitting? (y/n) ");
-        refresh();
+        getyx(stdscr, save_row, save_col);
+        statusMessage("Save changes before quitting? (y/n) ");
         answer = getch();
         if (answer != 'y') return;
         else if (writeUpdates(list) == TD_OK) return;
         else {
-          move(status_row, 0);
-          clrtoeol();
-          addstr("Unable to save changes. Quit anyway? (y/n) ");
-          refresh();
+          statusMessage("Unable to save changes. Quit anyway? (y/n) ");
           answer = getch();
           if (answer == 'y') return;
           else move(save_row, save_col);
@@ -306,26 +310,23 @@ eventLoop()
             
     // Save changes
     case 's':
-      save_row = cur_row; save_col = cur_col;
+      getyx(stdscr, save_row, save_col);
       if (listNumUpdates(list) == 0) {
-        move(status_row, 0);
-        mvaddstr(status_row, 0, "No updates to save.");
+        statusMessage("No updates to save.");
         move(save_row, save_col);
         break;
       }
-      mvaddstr(status_row, 0, "Save changes? (y/n) ");
-      refresh();
+      statusMessage("Save changes? (y/n) ");
       answer = getch();
-      move(status_row, 0);
-      clrtoeol();
       if (answer == 'y') {
-        if (writeUpdates(list) == TD_OK)
-          addstr("Changes successfully saved to backend.");
-        else
-          addstr("Unable to save changes to backend.");
+        if (writeUpdates(list) == TD_OK) {
+          statusMessage("Changes successfully saved to backend.");
+        } else {
+          statusMessage("Unable to save changes to backend.");
+        }
       } else
-        addstr("Changes not saved to backend.");
-      refresh();
+        statusMessage("Changes not saved to backend.");
+
       move(save_row, save_col);
       break;
 
@@ -335,11 +336,35 @@ eventLoop()
         getyx(stdscr, save_row, save_col);
         
         // TODO: check if task was edited
-        // TODO: the category of a task can be edited
-        // which could cause misalignment between the line and the cursor.
-        // check for this
         viewTaskScreen(list, (task_T) lineObj(line));
         redraw = true;
+      }
+      break;
+
+    // TODO: marking complete should hide all children as well
+    case 'x':
+      if (lineType(line) == LT_TASK) {
+        getyx(stdscr, save_row, save_col);
+        task = (task_T) lineObj(line);
+        statusMessage("Mark as complete? (y/n) ");
+        answer = getch();
+        if (answer != 'y') {
+          statusMessage("Task left unchanged.");
+        } else do {
+            // TODO: this should only by for unfinished subtasks
+            if (taskGetSubtask(task)) {
+              statusMessage("Mark all subtasks as complete? (y/n) ");
+              answer = getch();
+              if (answer != 'y') {
+                statusMessage("Task left unchanged.");
+                break;
+              }
+            }
+
+            if (markComplete(list, task) == TD_OK) redraw = true;
+            else statusMessage("Unable to mark as complete.");
+        } while (0);
+        move(save_row, save_col);
       }
       break;
 
@@ -363,12 +388,13 @@ void
 view(int argc, char **argv)
 {
 
-  initscr(); // TODO: check return value
+  initscr();
   cbreak();   // disable line buffering
   noecho();   // disable echo for getch
 
   eventLoop();
 
-  endwin(); // TODO: check return value
+  if (endwin() == ERR)
+    errExit("Curses failed to close properly");
 }
 

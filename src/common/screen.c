@@ -74,6 +74,12 @@ screenAddLine(screen_T screen, int type, void *obj, int level)
   tail->rlink = line;
   line->llink = tail;
 
+  if (type == LT_TASK) {
+    char *status = taskGet((task_T) obj, "status");
+    if (strcasecmp(status, "Complete") == 0)
+      line->hidden = 1;
+  }
+
   return TD_OK;
 }
 
@@ -170,10 +176,21 @@ lineLevel(const line_T line)
   else return line->level;
 }
 
+int
+lineIsHidden(const line_T line)
+{
+  if (!line) return 0;
+  else return line->hidden;
+}
+
 line_T
 lineGetNext(const line_T line)
 {
   if (!line) return NULL;
+
+  else if (lineIsHidden(line->rlink)) 
+    return lineGetNext(line->rlink);
+
   else return line->rlink;
 }
 
@@ -181,12 +198,9 @@ line_T
 lineGetPrev(const line_T line)
 {
   if (!line) return NULL;
-  else return line->llink;
-}
 
-int
-lineIsHidden(const line_T line)
-{
-  if (!line) return -1;
-  else return line->hidden;
+  else if (lineIsHidden(line->llink)) 
+    return lineGetPrev(line->llink);
+
+  else return line->llink;
 }

@@ -42,6 +42,7 @@
 #define MAX_SQL_LEN 2048
 #define FILENAME "test/data/test-db.sqlite3"
 
+// TODO: check that parent_id / category combinations are valid
 int
 readTasks(list_T *list)
 {

@@ -233,3 +233,22 @@ editTask(list_T list, task_T task)
   
 }
 
+// TODO: hide category if all tasks are marked as complete
+int 
+markComplete(list_T list, task_T task)
+{
+  if (!task) return -1; // TODO: return error code
+
+  taskSet(task, "status", "Complete");
+  listMarkTaskUpdated(list, task);
+
+  task_T child = taskGetSubtask(task);
+  while (child) {
+    taskSet(child, "status", "Complete");
+    listMarkTaskUpdated(list, child);
+    child = catGetTask(NULL, child);
+  }
+
+  return TD_OK;
+}
+  

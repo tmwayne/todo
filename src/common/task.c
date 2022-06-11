@@ -31,6 +31,7 @@ static char *required_keys[] = {
   "parent_id",
   "category",
   "name",
+  "status",
   NULL
 };
 
@@ -47,13 +48,15 @@ struct task_T {
   task_T rlink;
   task_T child;
   task_T parent;
-  int update;
+  int update;   // has the task been edited in the UI
 };
 
+// TODO: make naming of linked list heads consistent
+// some use the singular, some use the plural
 struct cat_T {
   char *name;   // name of the category
   int ntasks;   // number of tasks in the task linked list
-  task_T tasks;  // task linked list
+  task_T tasks; // task linked list
   cat_T link;   // link to next category
 };
 
@@ -106,7 +109,7 @@ taskSet(task_T task, const char *key, const char *val)
     }
   }
 
-  elem = memCalloc(1, sizeof(*elem));
+  elem = memCalloc(1, sizeof(*elem)); // TODO: check error status here
   elem->key = strdup(key);
   elem->val = strdup(val);
 
@@ -580,4 +583,11 @@ listClearUpdates(list_T list)
   list->nupdates = 0;
 
   return TD_OK;
+}
+
+int
+listMarkTaskUpdated(list_T list, task_T task)
+{
+  list->nupdates += task->update ^ 1;
+  task->update = 1;
 }

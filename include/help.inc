@@ -10,5 +10,6 @@
       Save changes ........................ s         \n\
       Add task ............................ t         \n\
       View task ........................... v         \n\
+      Mark task as complete ............... x         \n\
                                                       \n\
 ";

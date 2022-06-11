@@ -48,7 +48,8 @@ values
 
     (11, null, "Heidi", "Buy Heidi's bday gifts",
     "M", "P0", "This week", "2022-06-05", "2022-06-10",
-    "Yet to start", null, null, null);
+    "Yet to start", null, null, null),
 
-
-
+    (12, 11, "Heidi", "Book lavender fest hotel",
+    "XS", "P0", "This week", "2022-06-05", "2022-06-10",
+    "Complete", null, null, null);
