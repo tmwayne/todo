@@ -174,24 +174,25 @@ updateTask(char *list_name, task_T task)
   sqlite3_close(db);
 
   return TD_OK;
-
 }
 
-/*
 int
-writeUpdates(list_T updates)
+writeUpdates(list_T list)
 {
+  task_T *updates = listGetUpdates(list);
+
   if (updates == NULL) return -1; // TODO: return error code
 
-  for (int i=0; i < listSize(updates); i++)
-    if (updateTask(listName(updates), listGetTask(updates, i)) != TD_OK) return -1;
+  // TODO: if there is an error, this will do a partial write.
+  // See if we can rollback if there's an error.
+  for (int i=0; updates[i]; i++)
+    if (updateTask(listName(list), updates[i]) != TD_OK) return -1;
 
-  listClearTasks(updates, false);
+  free(updates);
+  listClearUpdates(list);
 
   return TD_OK;
-
 }
-*/
 
 int
 dumpTasks()

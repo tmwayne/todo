@@ -54,7 +54,7 @@ extern void    taskFree(task_T *);
 extern char   *catName(const cat_T);
 extern task_T  catGetTask(const cat_T, const task_T);
 
-extern list_T listNew(const char *);
+extern list_T  listNew(const char *);
 
 /**
  * Tasks are set by their ids. Because this data is stored in the task itself,
@@ -62,16 +62,23 @@ extern list_T listNew(const char *);
  * level and not the category level because a task's category can change, 
  * in which case it needs to be relocated in the list.
  */
-extern int    listSetTask(list_T, const task_T);
-extern int    listAddKey(list_T, const char *key);
-extern int    listContainsKey(const list_T, const char *key);
-extern char  *listName(const list_T);
+extern int     listSetTask(list_T, const task_T);
+extern int     listAddKey(list_T, const char *key);
+extern int     listContainsKey(const list_T, const char *key);
+extern char   *listName(const list_T);
 
 /**
  * If cat is NULL, returns the first category. If cat is not null, then
  * returns the next category.
  */
-extern cat_T  listGetCat(const list_T, const cat_T);
-extern void   listFree(list_T *);
+extern cat_T   listGetCat(const list_T, const cat_T);
+
+/**
+ * Returns an array of tasks that have been updated
+ */
+extern task_T *listGetUpdates(const list_T list);
+extern int     listNumUpdates(const list_T list);
+extern int     listClearUpdates(list_T list);
+extern void    listFree(list_T *);
 
 #endif // TASK_INCLUDED

@@ -47,6 +47,7 @@ struct task_T {
   task_T rlink;
   task_T child;
   task_T parent;
+  int update;
 };
 
 struct cat_T {
@@ -62,6 +63,7 @@ struct list_T {
   int nkeys;    // number of keys
   int keys_len; // length of keys array
   int ntasks;   // number of tasks
+  int nupdates; // number of updates
   int ncats;    // number of categories
   cat_T cat;    // categories linked list
 };
@@ -343,7 +345,7 @@ static task_T
 catFindTaskById(cat_T cat, char *id)
 {
   task_T task = NULL;
-  for (task = catGetTask(cat, task); task; task=catGetTask(cat, task))
+  while ((task = catGetTask(cat, task)))
     if (strcmp(taskGet(task, "id"), id) == 0)
       return task;
 
@@ -360,10 +362,12 @@ listSetTask(list_T list, const task_T task)
   task_T old;
 
   cat_T cat = NULL;
-  for (cat = listGetCat(list, cat); cat; cat = listGetCat(list, cat)) {
+  while ((cat = listGetCat(list, cat))) {
     old = catFindTaskById(cat, id);
     if (old) {
+      list->nupdates += old->update ^ 1;
       taskSwap(old, task);
+      old->update = 1;
       return TD_OK;
     }
   }
@@ -437,3 +441,57 @@ listGetCat(const list_T list, const cat_T cat)
   else return cat->link;
 }
 
+int
+listNumUpdates(const list_T list)
+{
+  if (!list) return 0;
+  else return list->nupdates;
+}
+
+task_T *
+listGetUpdates(const list_T list)
+{
+
+  if (!list->nupdates) return NULL;
+
+  int len = 8, i = 0;
+  task_T *updates = memCalloc(len, sizeof(task_T));
+  if (!updates) return NULL;
+  task_T task;
+
+  cat_T cat = NULL;
+  while ((cat = listGetCat(list, cat))) {
+    task = NULL;
+    while ((task = catGetTask(cat, task))) {
+      if (task->update) {
+        if (i >= len - 2) {
+          len *= 2;
+          updates = realloc(updates, len * sizeof(task_T));
+          if (!updates) return NULL;
+        }
+        updates[i] = task;
+        i++;
+      }
+    }
+  }
+
+  updates[i] = '\0';
+
+  return updates;
+}
+
+int
+listClearUpdates(list_T list)
+{
+  cat_T cat = NULL;
+  while ((cat = listGetCat(list, cat))) {
+
+    task_T task = NULL;
+    while ((task = catGetTask(cat, task)))
+      task->update = 0;
+
+  }
+  list->nupdates = 0;
+
+  return TD_OK;
+}

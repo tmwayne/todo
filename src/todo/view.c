@@ -231,10 +231,6 @@ eventLoop()
   readTasks(&list); 
   screenInitialize(screen, list);
 
-  // TODO: make updates a hash table so that per session only
-  // one update per task is made
-  list_T updates = listNew("default_list");
-
   viewListScreen(screen, list);
   line_T line = screenGetFirstLine(screen);
   move(0, 0);
@@ -259,7 +255,6 @@ eventLoop()
     case 'e':
       if (lineType(line) == LT_TASK) {
         getyx(stdscr, save_row, save_col);
-        // task_T task = (task_T) lineObj(line);
         if (editTask(list, (task_T) lineObj(line)) != TD_OK) {
           endwin();
           errExit("Failed editing task");
@@ -289,16 +284,14 @@ eventLoop()
 
     // Quit
     case 'q':
-      return;
-      /*
-      if (listSize(updates) == 0) return;
+      if (listNumUpdates(list) == 0) return;
       else {
         save_row = cur_row; save_col = cur_col;
         mvaddstr(status_row, 0, "Save changes before quitting? (y/n) ");
         refresh();
         answer = getch();
         if (answer != 'y') return;
-        else if (writeUpdates(updates) == TD_OK) return;
+        else if (writeUpdates(list) == TD_OK) return;
         else {
           move(status_row, 0);
           clrtoeol();
@@ -310,11 +303,10 @@ eventLoop()
         }
       }
       break;
-        */
             
-    /*
     // Save changes
     case 's':
+      if (listNumUpdates(list) == 0) break;
       save_row = cur_row; save_col = cur_col;
       mvaddstr(status_row, 0, "Save changes? (y/n) ");
       refresh();
@@ -322,7 +314,7 @@ eventLoop()
       move(status_row, 0);
       clrtoeol();
       if (answer == 'y') {
-        if (writeUpdates(updates) == TD_OK)
+        if (writeUpdates(list) == TD_OK)
           addstr("Changes successfully saved to backend.");
         else
           addstr("Unable to save changes to backend.");
@@ -331,7 +323,6 @@ eventLoop()
       refresh();
       move(save_row, save_col);
       break;
-    */
 
     // View task
     case 'v':
