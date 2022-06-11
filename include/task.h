@@ -79,7 +79,7 @@ extern task_T  listFindTaskById(const list_T, const char *id);
  */
 extern task_T *listGetUpdates(const list_T list);
 extern int     listNumUpdates(const list_T list);
-extern int     listMarkTaskUpdated(list_T, task_T);
+extern void    listMarkTaskUpdated(list_T, task_T);
 extern int     listClearUpdates(list_T list);
 extern void    listFree(list_T *);
 

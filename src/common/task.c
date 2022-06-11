@@ -585,9 +585,12 @@ listClearUpdates(list_T list)
   return TD_OK;
 }
 
-int
+// TODO: should this throw an error?
+void
 listMarkTaskUpdated(list_T list, task_T task)
 {
-  list->nupdates += task->update ^ 1;
-  task->update = 1;
+  if (list && task) {
+    list->nupdates += task->update ^ 1;
+    task->update = 1;
+  }
 }
