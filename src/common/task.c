@@ -242,7 +242,7 @@ catName(const cat_T cat)
 task_T
 catGetTask(const cat_T cat, task_T task)
 {
-  if (!cat) return NULL;
+  if (!(cat || task)) return NULL;
 
   else if (!task) return cat->tasks;
 
@@ -354,6 +354,19 @@ catFindTaskById(const cat_T cat, const char *id)
 }
 
 task_T
+taskFindChildById(const task_T task, const char *id)
+{
+  if (!(task && task->child && id)) return NULL;
+  task_T child = task->child;
+  do {
+    if (strcmp(taskGet(child, "id"), id) == 0)
+      return child;
+  } while ((child = catGetTask(NULL, child)));
+
+  return NULL;
+}
+
+task_T
 listFindTaskById(const list_T list, const char *id)
 {
   if (!(list && id)) return NULL;
@@ -402,8 +415,7 @@ listRemoveTask(list_T list, task_T task)
   // then there isn't a parent
   else if (cat->tasks == task) cat->tasks = task->rlink;
 
-  // Otherwise, check if where the first child
-  // of a parent
+  // Otherwise, check if we're the first child of a parent
   else if (task->parent) {
     if (task->parent->child == task) 
       task->parent->child = task->rlink;
@@ -422,8 +434,6 @@ listRemoveTask(list_T list, task_T task)
 int
 listSetTask(list_T list, task_T task)
 {
-  // TODO: there's currently a bug where if the edited task's 
-  // parent is currently a child
   // First check if the task current exists
   task_T old = listFindTaskById(list, taskGet(task, "id"));
   if (old) {

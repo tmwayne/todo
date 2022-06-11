@@ -171,13 +171,17 @@ enforceParentCategory(const list_T list, task_T edit)
     taskSet(edit, "category", taskGet(parent, "category"));
 
   // Case 3: Parent id is added or changed
-  // Error if new id of parent doesn't exist, otherwise
-  // enforce that the category is that of the new parent
+  // Error if new id of parent doesn't exist
   else {
-    // TODO: return error code indicating change to non-existing parent
-    if (!parent) return -1; 
+    if (!parent) return -1;  // TODO: return error code
 
-    else taskSet(edit, "category", taskGet(parent, "category"));
+    // Error if the new parent is one of the children
+    task_T child = taskFindChildById(task, edit_parent);
+    if (child) return -1; // TODO: return error code
+
+    // Otherwise enforce that the category is that of the new parent
+    taskSet(edit, "category", taskGet(parent, "category"));
+
   }
 
   return TD_OK;
@@ -188,7 +192,7 @@ validateEditedTask(const list_T list, task_T edit)
 {
   if (taskCheckKeys(edit) != TD_OK) return -1;
 
-  enforceParentCategory(list, edit);
+  if (enforceParentCategory(list, edit) != TD_OK) return -1; // TODO: return error code
 
   for (int i=0; i < taskSize(edit); i++) {
     elem_T elem = taskElemInd(edit, i);

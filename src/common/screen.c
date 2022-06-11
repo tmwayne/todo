@@ -83,8 +83,8 @@ screenAddTasks(screen_T screen, task_T task, int level)
 
   screenAddLine(screen, LT_TASK, task, level);
 
-  screenAddTasks(screen, taskGetSubtask(task), level+1);
-  screenAddTasks(screen, taskGetNext(task), level);
+  screenAddTasks(screen, taskGetSubtask(task), level+1); // TODO: check return codes
+  screenAddTasks(screen, taskGetNext(task), level); // TODO: check return code
 
   return TD_OK;
 }
@@ -95,8 +95,12 @@ screenInitialize(screen_T screen, const list_T list)
 {
   cat_T cat = NULL;
   while ((cat = listGetCat(list, cat))) {
-    screenAddLine(screen, LT_CAT, cat, 0); // TODO: check return code
-    screenAddTasks(screen, catGetTask(cat, NULL), 1); // TODO: check return code
+    screenAddLine(screen, LT_CAT, cat, 0); 
+
+    task_T task = catGetTask(cat, NULL);
+    if (!task) return -1; // TODO: return error code
+
+    screenAddTasks(screen, task, 1); // TODO: check return code
   }
 
   return TD_OK;

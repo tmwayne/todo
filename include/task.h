@@ -49,7 +49,7 @@ extern char   *taskValInd(const task_T task, const int ind);
 extern char   *taskKeyInd(const task_T task, const int ind);
 extern int     taskCheckKeys(const task_T);
 extern void    taskFree(task_T *);
-
+extern task_T  taskFindChildById(const task_T, const char *id);
 
 extern char   *catName(const cat_T);
 extern task_T  catGetTask(const cat_T, const task_T);
