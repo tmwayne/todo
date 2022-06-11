@@ -422,6 +422,8 @@ listRemoveTask(list_T list, task_T task)
 int
 listSetTask(list_T list, task_T task)
 {
+  // TODO: there's currently a bug where if the edited task's 
+  // parent is currently a child
   // First check if the task current exists
   task_T old = listFindTaskById(list, taskGet(task, "id"));
   if (old) {
@@ -549,7 +551,7 @@ listGetUpdates(const list_T list)
     }
   }
 
-  updates[i] = '\0';
+  updates[i] = NULL;
 
   return updates;
 }
