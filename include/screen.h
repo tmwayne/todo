@@ -35,7 +35,6 @@ extern int      screenAddLine(screen_T, int type, void *obj, int level);
 extern int      screenInitialize(screen_T, const list_T);
 extern int      screenReset(screen_T *, const list_T);
 extern line_T   screenGetFirstLine(const screen_T);
-extern void     screenRender(const screen_T);
 extern int      screenFree(screen_T *);
 
 extern int      lineType(const line_T);

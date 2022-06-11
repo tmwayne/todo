@@ -29,7 +29,7 @@ typedef struct cat_T  *cat_T;
 typedef struct list_T *list_T;
 
 extern task_T taskNew();
-extern int    taskSize(const task_T);
+extern int    taskSize(const task_T); // TODO: rename this
 
 /**
  * Sets the value of given key, which can't be NULL. If the key already exists
@@ -39,34 +39,39 @@ extern int    taskSize(const task_T);
  */
 extern void    taskSet(task_T, const char *key, const char *val);
 extern char   *taskGet(task_T, const char *key);
+extern task_T  taskGetSubtask(const task_T);
+extern task_T  taskGetNext(const task_T);
+
 extern elem_T  taskElemInd(const task_T task, const int ind);
 extern char   *elemKey(const elem_T);
 extern char   *elemVal(const elem_T);
 extern char   *taskValInd(const task_T task, const int ind);
 extern char   *taskKeyInd(const task_T task, const int ind);
-extern void    taskFree(task_T *);
 extern int     taskCheckKeys(const task_T);
-extern int     taskUpdate(task_T old, task_T new);
+extern void    taskFree(task_T *);
 
-// TODO: this is bad design. It's hard to hard the tree structure but
-// also allow for easy navigation. Redesign this.
-// TODO: returning pointers to tasks seems really dangerous. Refactor this.
-extern task_T  taskGetSubtask(const task_T);
-extern task_T  taskGetNext(const task_T);
 
 extern char   *catName(const cat_T);
-extern task_T  catGetTask(const cat_T);
-extern cat_T   catGetNext(const cat_T);
+extern task_T  catGetTask(const cat_T, const task_T);
 
 extern list_T listNew(const char *);
-extern int    listAddTask(list_T, const task_T);
+
+/**
+ * Tasks are set by their ids. Because this data is stored in the task itself,
+ * it doesn't not need to be passed as an argument. We set tasks at the list
+ * level and not the category level because a task's category can change, 
+ * in which case it needs to be relocated in the list.
+ */
+extern int    listSetTask(list_T, const task_T);
 extern int    listAddKey(list_T, const char *key);
 extern int    listContainsKey(const list_T, const char *key);
 extern char  *listName(const list_T);
+
+/**
+ * If cat is NULL, returns the first category. If cat is not null, then
+ * returns the next category.
+ */
+extern cat_T  listGetCat(const list_T, const cat_T);
 extern void   listFree(list_T *);
-extern int    listNumTasks(const list_T);
-extern int    listNumCats(const list_T);
-extern cat_T  listGetCat(const list_T);
-extern int    listUpdateTask(list_T, task_T);
 
 #endif // TASK_INCLUDED

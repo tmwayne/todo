@@ -67,13 +67,11 @@ viewTaskScreen(list_T list, task_T task, list_T updates)
     c = getch();
 
     // TODO: add task to updated tasks
-    // TODO: this doesn't render the edited task
     if (c == 'e') {
       if (editTask(list, task) != TD_OK) {
         endwin();
         errExit("Failed editing task");
       }
-      // listAddTask(updates, task);
     }
       
     else return TD_OK;
@@ -261,13 +259,11 @@ eventLoop()
     case 'e':
       if (lineType(line) == LT_TASK) {
         getyx(stdscr, save_row, save_col);
-        task_T edited_task = (task_T) lineObj(line);
-        // TODO: this doesn't update the original list or the screen
-        if (editTask(list, edited_task) != TD_OK) {
+        // task_T task = (task_T) lineObj(line);
+        if (editTask(list, (task_T) lineObj(line)) != TD_OK) {
           endwin();
           errExit("Failed editing task");
         }
-        // listAddTask(updates, task);
         redraw = true;
       }
       break;

@@ -189,7 +189,8 @@ editTask(list_T list, task_T task)
   if (validateEditedTask(list, edited_task) != TD_OK)
     return -1;
 
-  listUpdateTask(list, edited_task);
+  if (listSetTask(list, edited_task) != TD_OK)
+    return -1;
   
   return TD_OK;
   

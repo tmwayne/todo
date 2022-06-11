@@ -93,9 +93,10 @@ screenAddTasks(screen_T screen, task_T task, int level)
 int
 screenInitialize(screen_T screen, const list_T list)
 {
-  for(cat_T cat = listGetCat(list); cat; cat=catGetNext(cat)) {
+  cat_T cat = NULL;
+  for(cat = listGetCat(list, cat); cat; cat=listGetCat(list, cat)) {
     screenAddLine(screen, LT_CAT, cat, 0); // TODO: check return code
-    screenAddTasks(screen, catGetTask(cat), 1); // TODO: check return code
+    screenAddTasks(screen, catGetTask(cat, NULL), 1); // TODO: check return code
   }
 
   return TD_OK;

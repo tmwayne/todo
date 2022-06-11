@@ -95,7 +95,8 @@ readTasks(list_T *list)
       taskSet(task, sqlite3_column_name(stmt, i), 
         (char *) sqlite3_column_text(stmt, i));
 
-    listAddTask(*list, task);
+    // listAddTask(*list, task);
+    listSetTask(*list, task);
 
   }
 

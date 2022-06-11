@@ -46,13 +46,13 @@ struct task_T {
   task_T llink;
   task_T rlink;
   task_T child;
-  // task_T parent;
+  task_T parent;
 };
 
 struct cat_T {
   char *name;   // name of the category
   int ntasks;   // number of tasks in the task linked list
-  task_T task;  // task linked list
+  task_T tasks;  // task linked list
   cat_T link;   // link to next category
 };
 
@@ -206,6 +206,25 @@ taskGetNext(const task_T task)
   if (!task) return NULL;
   else return task->rlink;
 }
+  
+static int
+taskSwap(task_T old, task_T new)
+{
+  if (!(old && new)) return -1; // TODO: return error code
+
+  struct task_T tmp = *old;
+
+  new->llink = old->llink;
+  new->rlink = old->rlink;
+  new->child = old->child;
+  new->parent = old->parent;
+  *old = *new;
+
+  *new = tmp;
+  taskFree(&new);
+
+  return TD_OK;
+}
 
 // -----------------------------------------------------------------------------
 // Category
@@ -218,18 +237,23 @@ catName(const cat_T cat)
   else return cat->name;
 }
 
-cat_T
-catGetNext(const cat_T cat)
-{
-  if (!cat) return NULL;
-  else return cat->link;
-}
-
 task_T
-catGetTask(const cat_T cat)
+catGetTask(const cat_T cat, task_T task)
 {
   if (!cat) return NULL;
-  else return cat->task;
+
+  else if (!task) return cat->tasks;
+
+  else if (task->child) return task->child;
+
+  else if (task->rlink) return task->rlink;
+
+  else {
+    for (task=task->parent; task; task=task->parent)
+      if (task->rlink) return task->rlink;
+  }
+
+  return NULL;
 }
 
 static int
@@ -278,7 +302,7 @@ listFree(list_T *list)
 
   for (cat = (*list)->cat; cat; ) {
     next = cat->link;
-    catFree(&cat->task);
+    catFree(&cat->tasks);
     free(cat->name);
     cat = next;
   }
@@ -316,43 +340,49 @@ getCategory(list_T list, char *name)
 }
 
 static task_T
-findParent(task_T task, char *parent_id)
+catFindTaskById(cat_T cat, char *id)
 {
-  task_T parent;
-  if (!task) return NULL;
-
-  else if (strcmp(taskGet(task, "id"), parent_id) == 0)
-    return task;
-
-  else if (task->child) {
-    parent = findParent(task->child, parent_id);
-    if (parent) return parent;
-  }
-
-  else if (task->rlink) {
-    parent = findParent(task->rlink, parent_id);
-    if (parent) return parent;
-  }
+  task_T task = NULL;
+  for (task = catGetTask(cat, task); task; task=catGetTask(cat, task))
+    if (strcmp(taskGet(task, "id"), id) == 0)
+      return task;
 
   return NULL;
 }
+  
 
-// TODO: edit
 int
-listAddTask(list_T list, const task_T task)
+listSetTask(list_T list, const task_T task)
 {
-  char *name = taskGet(task, "category");
-  cat_T cat = getCategory(list, name);
 
-  task_T parent = findParent(cat->task, taskGet(task, "parent_id"));
+  // First check if the task current exists
+  char *id = taskGet(task, "id");
+  task_T old;
+
+  cat_T cat = NULL;
+  for (cat = listGetCat(list, cat); cat; cat = listGetCat(list, cat)) {
+    old = catFindTaskById(cat, id);
+    if (old) {
+      taskSwap(old, task);
+      return TD_OK;
+    }
+  }
+
+  // If it doesn't check for an existing parent
+  cat = getCategory(list, taskGet(task, "category"));
+  task_T parent = catFindTaskById(cat, taskGet(task, "parent_id"));
+
   if (parent) {
     if (parent->child) parent->child->llink = task;
     task->rlink = parent->child;
     parent->child = task;
+    task->parent = parent;
+
+  // Otherwise, set as a new task
   } else {
-    if (cat->task) cat->task->llink = task;
-    task->rlink = cat->task;
-    cat->task = task;
+    if (cat->tasks) cat->tasks->llink = task;
+    task->rlink = cat->tasks;
+    cat->tasks = task;
   }
 
   cat->ntasks++;
@@ -384,20 +414,6 @@ listName(const list_T list)
 }
 
 int
-listNumTasks(const list_T list)
-{
-  if (!list) return -1; // TODO: return error code
-  else return list->ntasks;
-}
-
-int
-listNumCats(const list_T list)
-{
-  if (!list) return -1; // TODO: return error code
-  else return list->ncats;
-}
-
-int
 listKeySize(const list_T list)
 {
   if (!list) return -1; // TODO: return error code
@@ -414,75 +430,10 @@ listContainsKey(const list_T list, const char *key)
 }
   
 cat_T
-listGetCat(const list_T list)
+listGetCat(const list_T list, const cat_T cat)
 {
   if (!list) return NULL;
-  else return list->cat;
+  else if (!cat) return list->cat;
+  else return cat->link;
 }
-
-static task_T
-findPrevTaskById(task_T prev, char *id)
-{
-  if (!prev) return NULL;
-
-  if (prev->child && strcmp(taskGet(prev->child, "id"), id) == 0)
-    return prev;
-
-  if (prev->rlink && strcmp(taskGet(prev->rlink, "id"), id) == 0)
-    return prev;
-
-  task_T ret = findPrevTaskById(prev->child, id);
-  if (ret) return ret;
-
-  ret = findPrevTaskById(prev->rlink, id);
-  if (ret) return ret;
-
-  return NULL;
-}
-
-int
-listUpdateTask(list_T list, task_T task)
-{
-  char *id = taskGet(task, "id");
-  // Note we can't start with the category, because
-  // the category could have changed
-  char *category = taskGet(task, "category");
-
-  task_T old;
-  task_T prev;
-
-  cat_T cat = listGetCat(list);
-  for ( ; cat; cat = catGetNext(cat)) {
-    if (cat->ntasks) {
-      if (strcmp(taskGet(cat->task, "id"), id) == 0) {
-        old = cat->task;
-        cat->task = task;
-        break;
-      }
-      // When we find the previous task, we have to check if it's
-      // a parent or a link
-      else if ((prev = findPrevTaskById(cat->task, id))) {
-        if (prev->child && strcmp(taskGet(prev->child, "id"), id) == 0) {
-          old = prev->child;
-          prev->child = task;
-          break;
-        } else {
-          old = prev->rlink;
-          break;
-        }
-      }
-    }
-  }
-
-  task->child = old->child;
-  if (old->rlink) old->rlink->llink = task;
-  if (old->llink) old->llink->rlink = task;
-  task->rlink = old->rlink;
-  task->llink = old->llink;
-
-  return TD_OK;
-
-  // TODO: Check if category has changed, move task if needed
-}
-  
 
