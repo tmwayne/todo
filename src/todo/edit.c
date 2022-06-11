@@ -30,11 +30,9 @@
 #include "task.h"            // elem_T
 
 static int
-writeTaskToTmpFile(char *template, task_T task)
+writeTaskToTmpFile(char *template, const task_T task)
 {
-  int fd;
-
-  fd = mkstemp(template);
+  int fd = mkstemp(template);
   if (fd == -1) return -1; // TODO: return error code
 
   for (int i=0; i < taskSize(task); i++) {
@@ -53,7 +51,7 @@ writeTaskToTmpFile(char *template, task_T task)
 
 // TODO: need version when not in view (curses) mode
 static int
-editTmpFile(char *pathname)
+editTmpFile(const char *pathname)
 {
   char *editor = getenv("EDITOR");
   if (editor == NULL)
@@ -102,7 +100,7 @@ trim(char **buf, ssize_t *len)
 }
 
 static int
-parseEditedFile(char *pathname, task_T task)
+parseEditedFile(const char *pathname, task_T task)
 {
   FILE *file = fopen(pathname, "r");
   if (!file) errExit("fopen");
@@ -154,12 +152,46 @@ parseEditedFile(char *pathname, task_T task)
 }
 
 static int
-validateEditedTask(list_T list, task_T task)
+enforceParentCategory(const list_T list, task_T edit)
 {
-  if (taskCheckKeys(task) != TD_OK) return -1;
+  task_T task = listFindTaskById(list, taskGet(edit, "id"));
 
-  for (int i=0; i < taskSize(task); i++) {
-    elem_T elem = taskElemInd(task, i);
+  char *task_parent = taskGet(task, "parent_id");
+  char *edit_parent = taskGet(edit, "parent_id");
+
+  task_T parent = listFindTaskById(list, edit_parent);
+
+  // Case 1: No parent id or parent id is removed
+  // Allow any change to category
+  if (strcmp(edit_parent, "") == 0) ;
+
+  // Case 2: Parent id is unchanged
+  // Enforce that the category must go unchanged
+  else if (strcmp(task_parent, edit_parent) == 0)
+    taskSet(edit, "category", taskGet(parent, "category"));
+
+  // Case 3: Parent id is added or changed
+  // Error if new id of parent doesn't exist, otherwise
+  // enforce that the category is that of the new parent
+  else {
+    // TODO: return error code indicating change to non-existing parent
+    if (!parent) return -1; 
+
+    else taskSet(edit, "category", taskGet(parent, "category"));
+  }
+
+  return TD_OK;
+}
+
+static int
+validateEditedTask(const list_T list, task_T edit)
+{
+  if (taskCheckKeys(edit) != TD_OK) return -1;
+
+  enforceParentCategory(list, edit);
+
+  for (int i=0; i < taskSize(edit); i++) {
+    elem_T elem = taskElemInd(edit, i);
     if (!listContainsKey(list, elemKey(elem))) return -1;
   }
 
@@ -171,8 +203,9 @@ validateEditedTask(list_T list, task_T task)
 int
 editTask(list_T list, task_T task)
 {
-  task_T edited_task = taskNew();
-  taskSet(edited_task, "id", taskGet(task, "id"));
+  task_T edit = taskNew();
+  taskSet(edit, "id", taskGet(task, "id"));
+  taskSet(edit, "category", taskGet(task, "category"));
 
   char pathname[] = "/tmp/task-XXXXXX";
   if (writeTaskToTmpFile(pathname, task) != TD_OK)
@@ -181,15 +214,15 @@ editTask(list_T list, task_T task)
   if (editTmpFile(pathname) != TD_OK)
     return -1;
 
-  if (parseEditedFile(pathname, edited_task) != TD_OK)
+  if (parseEditedFile(pathname, edit) != TD_OK)
     return -1;
 
   unlink(pathname);
 
-  if (validateEditedTask(list, edited_task) != TD_OK)
+  if (validateEditedTask(list, edit) != TD_OK)
     return -1;
 
-  if (listSetTask(list, edited_task) != TD_OK)
+  if (listSetTask(list, edit) != TD_OK)
     return -1;
   
   return TD_OK;

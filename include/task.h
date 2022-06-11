@@ -62,7 +62,7 @@ extern list_T  listNew(const char *);
  * level and not the category level because a task's category can change, 
  * in which case it needs to be relocated in the list.
  */
-extern int     listSetTask(list_T, const task_T);
+extern int     listSetTask(list_T, task_T);
 extern int     listAddKey(list_T, const char *key);
 extern int     listContainsKey(const list_T, const char *key);
 extern char   *listName(const list_T);
@@ -72,6 +72,7 @@ extern char   *listName(const list_T);
  * returns the next category.
  */
 extern cat_T   listGetCat(const list_T, const cat_T);
+extern task_T  listFindTaskById(const list_T, const char *id);
 
 /**
  * Returns an array of tasks that have been updated

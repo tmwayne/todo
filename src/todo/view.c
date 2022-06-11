@@ -41,7 +41,7 @@
 
 
 static int
-viewTaskScreen(list_T list, task_T task, list_T updates)
+viewTaskScreen(list_T list, task_T task)
 {
   int row;
   char c;
@@ -306,8 +306,13 @@ eventLoop()
             
     // Save changes
     case 's':
-      if (listNumUpdates(list) == 0) break;
       save_row = cur_row; save_col = cur_col;
+      if (listNumUpdates(list) == 0) {
+        move(status_row, 0);
+        mvaddstr(status_row, 0, "No updates to save.");
+        move(save_row, save_col);
+        break;
+      }
       mvaddstr(status_row, 0, "Save changes? (y/n) ");
       refresh();
       answer = getch();
@@ -333,7 +338,7 @@ eventLoop()
         // TODO: the category of a task can be edited
         // which could cause misalignment between the line and the cursor.
         // check for this
-        viewTaskScreen(list, (task_T) lineObj(line), updates);
+        viewTaskScreen(list, (task_T) lineObj(line));
         redraw = true;
       }
       break;

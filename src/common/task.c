@@ -259,12 +259,12 @@ catGetTask(const cat_T cat, task_T task)
 }
 
 static int
-catFree(task_T *task)
+catFreeTasks(task_T *task)
 {
   if (!(*task)) return TD_OK;
 
-  catFree(&(*task)->rlink);
-  catFree(&(*task)->child);
+  catFreeTasks(&(*task)->rlink);
+  catFreeTasks(&(*task)->child);
 
   taskFree(task);
   *task = NULL;
@@ -304,7 +304,7 @@ listFree(list_T *list)
 
   for (cat = (*list)->cat; cat; ) {
     next = cat->link;
-    catFree(&cat->tasks);
+    catFreeTasks(&cat->tasks);
     free(cat->name);
     cat = next;
   }
@@ -342,8 +342,9 @@ getCategory(list_T list, char *name)
 }
 
 static task_T
-catFindTaskById(cat_T cat, char *id)
+catFindTaskById(const cat_T cat, const char *id)
 {
+  if (!(cat && id)) return NULL;
   task_T task = NULL;
   while ((task = catGetTask(cat, task)))
     if (strcmp(taskGet(task, "id"), id) == 0)
@@ -351,34 +352,106 @@ catFindTaskById(cat_T cat, char *id)
 
   return NULL;
 }
-  
 
-int
-listSetTask(list_T list, const task_T task)
+task_T
+listFindTaskById(const list_T list, const char *id)
 {
-
-  // First check if the task current exists
-  char *id = taskGet(task, "id");
-  task_T old;
+  if (!(list && id)) return NULL;
 
   cat_T cat = NULL;
   while ((cat = listGetCat(list, cat))) {
-    old = catFindTaskById(cat, id);
-    if (old) {
-      list->nupdates += old->update ^ 1;
-      taskSwap(old, task);
-      old->update = 1;
-      return TD_OK;
-    }
+    task_T task = catFindTaskById(cat, id);
+    if (task) return task;
+  }
+
+  return NULL;
+}
+
+static int
+listDeleteCat(list_T list, cat_T *cat)
+{
+  if (!(list && cat && *cat)) return -1; // TODO: return error code
+
+  if (list->cat == *cat) list->cat = (*cat)->link;
+  else {
+    cat_T prev = list->cat;
+    for ( ; prev->link == (*cat); prev=prev->link ) ;
+    prev->link = (*cat)->link;
+  }
+
+  free((*cat)->name);
+  free(*cat);
+  *cat = NULL;
+
+  return TD_OK;
+}
+
+static int
+listRemoveTask(list_T list, task_T task)
+{
+  if (!(list && task)) return -1; // TODO: return error code
+
+  cat_T cat = getCategory(list, taskGet(task, "category"));
+  cat->ntasks--;
+
+  // If we're the only task in the category,
+  // then there isn't a parent.
+  if (cat->ntasks == 0) listDeleteCat(list, &cat);
+
+  // If we're the first task in category,
+  // then there isn't a parent
+  else if (cat->tasks == task) cat->tasks = task->rlink;
+
+  // Otherwise, check if where the first child
+  // of a parent
+  else if (task->parent) {
+    if (task->parent->child == task) 
+      task->parent->child = task->rlink;
+  }
+      
+  // If none of these, then there is a left link to adjust
+  else if (task->llink) task->llink->rlink = task->rlink;
+
+  if (task->rlink) task->rlink->llink = task->llink;
+
+  task->llink = task->rlink = NULL;
+
+  return TD_OK;
+}
+
+int
+listSetTask(list_T list, task_T task)
+{
+  // First check if the task current exists
+  task_T old = listFindTaskById(list, taskGet(task, "id"));
+  if (old) {
+    int new_placement = strcmp(taskGet(old, "parent_id"), 
+      taskGet(task, "parent_id")) || strcmp(taskGet(old, "category"),
+      taskGet(task, "category"));
+
+    if (new_placement) listRemoveTask(list, old); // TODO: check for error
+
+    list->nupdates += old->update ^ 1;
+    taskSwap(old, task);
+    task = old;
+    task->update = 1;
+
+    if (!(new_placement)) return TD_OK;
+
+    // If we have to adjust the placement of the task,
+    // then we let it fall through to the next section
+    else list->ntasks--;
+
   }
 
   // If it doesn't check for an existing parent
-  cat = getCategory(list, taskGet(task, "category"));
-  task_T parent = catFindTaskById(cat, taskGet(task, "parent_id"));
+  cat_T cat = getCategory(list, taskGet(task, "category"));
+  task_T parent = listFindTaskById(list, taskGet(task, "parent_id"));
 
   if (parent) {
     if (parent->child) parent->child->llink = task;
     task->rlink = parent->child;
+    task->llink = NULL;
     parent->child = task;
     task->parent = parent;
 
@@ -386,6 +459,7 @@ listSetTask(list_T list, const task_T task)
   } else {
     if (cat->tasks) cat->tasks->llink = task;
     task->rlink = cat->tasks;
+    task->llink = NULL;
     cat->tasks = task;
   }
 
