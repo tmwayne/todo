@@ -22,6 +22,7 @@
 
 #include <stdio.h>
 #include <stdlib.h> // free
+#include <string.h> // strdup
 #include "mem.h"
 #include "task.h"
 #include "error-codes.h"
@@ -101,6 +102,9 @@ screenInitialize(screen_T screen, const list_T list)
     if (!task) return -1; // TODO: return error code
 
     screenAddTasks(screen, task, 1); // TODO: check return code
+
+    // Blank line between categories
+    screenAddLine(screen, LT_STR, strdup(""), 0);
   }
 
   return TD_OK;

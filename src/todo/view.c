@@ -66,7 +66,6 @@ viewTaskScreen(list_T list, task_T task)
     refresh();
     c = getch();
 
-    // TODO: add task to updated tasks
     if (c == 'e') {
       if (editTask(list, task) != TD_OK) {
         endwin();
@@ -97,7 +96,8 @@ viewListScreen(screen_T screen, list_T list)
     char *val;
     int level = lineLevel(line);
     if (level < 0) return -1; // TODO: return error code
-    switch (lineType(line)) {
+    int type = lineType(line);
+    switch (type) {
     case LT_STR:
       val = (char *) lineObj(line);
       break;
@@ -115,7 +115,7 @@ viewListScreen(screen_T screen, list_T list)
     }
 
     move(row, 0);
-    if (level == 0) addstr("[");
+    if (type == LT_CAT) addstr("[");
     else {
       for (int i=level; i>0; i--) 
         if (i == 1) addstr(". ");
@@ -123,7 +123,7 @@ viewListScreen(screen_T screen, list_T list)
     }
 
     addstr(val);
-    if (level == 0) addstr("]");
+    if (type == LT_CAT) addstr("]");
 
     row++;
   }
