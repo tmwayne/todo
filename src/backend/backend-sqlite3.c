@@ -28,7 +28,7 @@
 #include "error-codes.h"
 #include "error-functions.h" // errExit
 
-// TODO: parameterize readTasks (filename, db, table, etc)
+// TODO: parameterize readTasks (filename)
 
 #ifdef TESTING
 #define sqlErr(fmt, ...) return -1;
@@ -39,24 +39,22 @@
   } while (0);
 #endif
 
-#define BUF_LEN 512
 #define MAX_SQL_LEN 2048
 #define FILENAME "test/data/test-db.sqlite3"
 
 // TODO: check that parent_id / category combinations are valid
 int
-readTasks(list_T *list)
+readTasks(list_T list)
 {
-  // TODO: make the list name a parameter
-  if (*list == NULL) *list = listNew("default_list");
+  if (!list) return TD_INVALIDARG;
 
   sqlite3 *db;
   sqlite3_stmt *stmt;
   int rc;
 
   // TODO: need to guard against SQL injection here
-  char sql[BUF_LEN];
-  snprintf(sql, BUF_LEN, "select * from %s", listName(*list));
+  char sql[MAX_SQL_LEN];
+  snprintf(sql, MAX_SQL_LEN, "select * from %s", listName(list));
 
   rc = sqlite3_open_v2(
     FILENAME,              // filename
@@ -82,7 +80,7 @@ readTasks(list_T *list)
   int ncols = sqlite3_column_count(stmt);
 
   for (int i=0; i < ncols; i++)
-    listAddKey(*list, sqlite3_column_name(stmt, i));
+    listAddKey(list, sqlite3_column_name(stmt, i));
 
   while ((rc = sqlite3_step(stmt)) != SQLITE_DONE) {
 
@@ -97,10 +95,10 @@ readTasks(list_T *list)
       taskSet(task, sqlite3_column_name(stmt, i), 
         (char *) sqlite3_column_text(stmt, i));
 
-    if (taskCheckKeys(task) != TD_OK) return -1;
+    if (taskCheckKeys(task) != TD_OK) return -1; // TODO: return error code
 
     if (strcasecmp(taskGet(task, "status"), "Complete") != 0)
-      listSetTask(*list, task);
+      listSetTask(list, task);
 
   }
 
@@ -122,7 +120,7 @@ updateTask(list_T list, task_T task)
 
   // TODO: need to guard against SQL injection here
   // TODO: prepare this query dynamically
-  // TODO: add rem
+  // TODO: add remaining columns
   char sql[MAX_SQL_LEN];
   snprintf(sql, MAX_SQL_LEN,
     "update %s            \
@@ -130,9 +128,9 @@ updateTask(list_T list, task_T task)
       parent_id   = ?2,   \
       category    = ?3,   \
       name        = ?4,   \
-      effort      = ?5,   \
-      priority    = ?6,   \
-      status      = ?7    \
+      status      = ?5    \
+      effort      = ?6,   \
+      priority    = ?7,   \
     where id = ?1", 
     listName(list));
 
@@ -164,9 +162,9 @@ updateTask(list_T list, task_T task)
   BIND_TEXT(2, taskGet(task, "parent_id"));
   BIND_TEXT(3, taskGet(task, "category"));
   BIND_TEXT(4, taskGet(task, "name"));
-  BIND_TEXT(5, taskGet(task, "effort"));
-  BIND_TEXT(6, taskGet(task, "priority"));
-  BIND_TEXT(7, taskGet(task, "status"));
+  BIND_TEXT(5, taskGet(task, "status"));
+  BIND_TEXT(6, taskGet(task, "effort"));
+  BIND_TEXT(7, taskGet(task, "priority"));
 
   if ((rc = sqlite3_step(stmt)) != SQLITE_DONE)
     sqlErr("Failed to update database: %s", sqlite3_errmsg(db));
@@ -189,7 +187,7 @@ writeNewTask(list_T list, task_T task)
   // TODO: prepare this query dynamically
   char sql[MAX_SQL_LEN];
   snprintf(sql, MAX_SQL_LEN,
-    "insert into %s (id, parent_id, category, name, effort, priority, status) \
+    "insert into %s (id, parent_id, category, name, status, effort, priority) \
     values (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
     listName(list));
 
@@ -221,9 +219,9 @@ writeNewTask(list_T list, task_T task)
   BIND_TEXT(2, taskGet(task, "parent_id"));
   BIND_TEXT(3, taskGet(task, "category"));
   BIND_TEXT(4, taskGet(task, "name"));
-  BIND_TEXT(5, taskGet(task, "effort"));
-  BIND_TEXT(6, taskGet(task, "priority"));
-  BIND_TEXT(7, taskGet(task, "status"));
+  BIND_TEXT(5, taskGet(task, "status"));
+  BIND_TEXT(6, taskGet(task, "effort"));
+  BIND_TEXT(7, taskGet(task, "priority"));
 
   if ((rc = sqlite3_step(stmt)) != SQLITE_DONE)
     sqlErr("Failed to add task to database: %s", sqlite3_errmsg(db));

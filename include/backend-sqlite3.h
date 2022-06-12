@@ -24,7 +24,7 @@
 #include "task.h" // task_T
 #include "list.h" // list_T
 
-extern int readTasks(list_T *);
+extern int readTasks(list_T);
 extern int writeUpdates(list_T);
 extern int dumpTasks();
 

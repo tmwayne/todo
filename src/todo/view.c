@@ -227,10 +227,10 @@ eventLoop()
 {
 
   screen_T screen = screenNew();
-  list_T list = NULL;
+  list_T list = listNew("default_list");
   task_T task;
 
-  readTasks(&list); 
+  readTasks(list); 
   screenInitialize(screen, list);
 
   viewListScreen(screen, list);
@@ -314,6 +314,8 @@ eventLoop()
 
       move(save_row, save_col);
       break;
+
+    // TODO: create an undo option (this will require substantial work)
 
     case 'v': // View task
       if (lineType(line) == LT_TASK) {
