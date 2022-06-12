@@ -62,8 +62,6 @@ extern int    taskSize(const task_T); // TODO: rename this
  */
 extern void    taskSet(task_T, const char *key, const char *val);
 extern char   *taskGet(task_T, const char *key);
-extern task_T  taskGetSubtask(const task_T);
-extern task_T  taskGetNext(const task_T);
 
 extern elem_T  taskElemInd(const task_T task, const int ind);
 extern char   *elemKey(const elem_T);
@@ -71,8 +69,15 @@ extern char   *elemVal(const elem_T);
 extern char   *taskValInd(const task_T task, const int ind);
 extern char   *taskKeyInd(const task_T task, const int ind);
 extern int     taskCheckKeys(const task_T);
+
+extern task_T  taskGetSubtask(const task_T);
+extern task_T  taskGetNext(const task_T);
+
 extern int     taskSetFlag(task_T, const int flags);
 extern int     taskGetFlag(const task_T, const int flag);
+
+extern int     taskSetLevel(task_T, const int level);
+extern int     taskGetLevel(const task_T);
 
 extern int     taskSwap(task_T old, task_T new);
 extern void    taskFree(task_T *);

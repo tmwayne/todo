@@ -160,7 +160,7 @@ screenFree(screen_T *screen)
 int
 lineType(const line_T line)
 {
-  if (!line) return 0;
+  if (!line) return TD_INVALIDARG;
   else return line->type;
 }
 
@@ -174,14 +174,14 @@ lineObj(const line_T line)
 int
 lineLevel(const line_T line)
 {
-  if (!line) return -1;
+  if (!line) return TD_INVALIDARG;
   else return line->level;
 }
 
 int
 lineIsHidden(const line_T line)
 {
-  if (!line) return 0;
+  if (!line) return TD_INVALIDARG;
   else return line->hidden;
 }
 

@@ -99,7 +99,8 @@ getCategory(list_T list, char *name)
     if (strcmp(cat->name, name) == 0) return cat;
 
   cat = memCalloc(1, sizeof(*cat));
-  if (!cat) return NULL; // TODO: return error code
+  if (!cat) return NULL; 
+
   cat->name = strdup(name);
   cat->link = list->cat;
   list->cat = cat;
@@ -195,7 +196,7 @@ listFindTaskById(const list_T list, const char *id)
 static int
 listDeleteCat(list_T list, cat_T *cat)
 {
-  if (!(list && cat && *cat)) return -1; // TODO: return error code
+  if (!(list && cat && *cat)) return TD_INVALIDARG;
 
   if (list->cat == *cat) list->cat = (*cat)->link;
   else {
@@ -212,23 +213,37 @@ listDeleteCat(list_T list, cat_T *cat)
 }
 
 static int
+taskNumChildren(task_T task)
+{
+  int n = 0;
+  if (!task) return 0;
+
+  int stop = task->level;
+  while ((task = catGetTask(NULL, task)) && task->level > stop) 
+    n++;
+
+  return n;
+}
+
+static int
+taskNumChildrenOpen(task_T task)
+{
+  int n = 0;
+  if (!task) return 0;
+
+  int stop = task->level;
+  while ((task = catGetTask(NULL, task)) && task->level > stop)
+    if (!taskGetFlag(task, TF_COMPLETE)) n++;
+
+  return n;
+}
+
+static int
 listPopTask(list_T list, task_T task)
 {
-  if (!(list && task)) return -1; // TODO: return error code
+  if (!(list && task)) return TD_INVALIDARG;
 
   cat_T cat = getCategory(list, taskGet(task, "category"));
-
-  list->ntasks--;
-
-  // Update ntask and nopen account based on all children
-  // (starting with the task itself)
-  task_T child = task;
-  do {
-    cat->ntasks--;
-    // Only decrement nopen if the task hasn't been marked as complete
-    if (task->flags ^ TF_COMPLETE) cat->nopen--;
-    child = catGetTask(NULL, child);
-  } while (child && child != task->rlink);
 
   // If we're the only task in the category,
   // then there isn't a parent.
@@ -249,9 +264,25 @@ listPopTask(list_T list, task_T task)
 
   if (task->rlink) task->rlink->llink = task->llink;
 
-  task->llink = task->rlink = NULL;
+  // Sever the task from the tree
+  task->parent = task->llink = task->rlink = NULL;
+
+  // Update accounting for ntasks and nopen
+  list->ntasks--;
+  cat->ntasks -= taskNumChildren(task) + 1;
+  cat->nopen -= taskNumChildrenOpen(task) + !taskGetFlag(task, TF_COMPLETE);
 
   return TD_OK;
+}
+
+static void
+taskAdjustSubtreeLevels(task_T task, const int level)
+{
+  if (!task) return;
+  
+  task->level = level;
+  if (task->child) taskAdjustSubtreeLevels(task->child, level + 1);
+  if (task->rlink) taskAdjustSubtreeLevels(task->rlink, level);
 }
 
 int
@@ -269,7 +300,6 @@ listSetTask(list_T list, task_T task)
     list->nupdates += !(old->flags & TF_UPDATE);
     taskSwap(old, task);
     task = old;
-    // task->flags |= TF_UPDATE;
 
     // If we have to adjust the placement of the task,
     // then we let it fall through to the next section
@@ -285,6 +315,7 @@ listSetTask(list_T list, task_T task)
     task->rlink = parent->child;
     task->llink = NULL;
     parent->child = task;
+    taskAdjustSubtreeLevels(task, parent->level+1);
     task->parent = parent;
 
   // Otherwise, set as a new task
@@ -293,13 +324,14 @@ listSetTask(list_T list, task_T task)
     task->rlink = cat->tasks;
     task->llink = NULL;
     cat->tasks = task;
+    taskAdjustSubtreeLevels(task, 0);
   }
 
   int id = strtol(taskGet(task, "id"), NULL, 10);
   if (id > list->maxid) list->maxid = id;
 
-  if (task->flags ^ TF_COMPLETE) cat->nopen++;
-  cat->ntasks++;
+  cat->nopen += taskNumChildrenOpen(task) + !taskGetFlag(task, TF_COMPLETE);
+  cat->ntasks += taskNumChildren(task) + 1;
   list->ntasks++;
   
   return TD_OK;
@@ -330,7 +362,7 @@ listName(const list_T list)
 int
 listNumKeys(const list_T list)
 {
-  if (!list) return -1; // TODO: return error code
+  if (!list) return TD_INVALIDARG;
   else return list->nkeys;
 }
 
@@ -415,26 +447,22 @@ listClearUpdates(list_T list)
   return TD_OK;
 }
 
-// TODO: there is an issue of a tasks that aren't
-// children being included as subtasks
 int 
 markComplete(list_T list, task_T task)
 {
-  if (!task) return -1; // TODO: return error code
+  if (!task) return TD_INVALIDARG;
   cat_T cat = getCategory(list, taskGet(task, "category"));
   if (!cat) return -1; // TODO: return error code
 
-  task_T stop = task->rlink;
+  int stop = task->level;
   do {
     taskSet(task, "status", "Complete");
     list->nupdates += !(task->flags & TF_UPDATE);
-    // if (task->flags ^ TF_COMPLETE) 
     if (!taskGetFlag(task, TF_COMPLETE)) 
       cat->nopen--;
-    // task->flags |= TF_UPDATE | TF_COMPLETE;
     taskSetFlag(task, TF_UPDATE | TF_COMPLETE);
     task = catGetTask(NULL, task);
-  } while (task && task != stop);
+  } while (task && task->level > stop);
 
   return TD_OK;
 }
@@ -442,6 +470,6 @@ markComplete(list_T list, task_T task)
 int
 listGetMaxId(const list_T list)
 {
-  if (!list) return 0;
+  if (!list) return TD_INVALIDARG;
   else return list->maxid;
 }

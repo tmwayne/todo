@@ -21,6 +21,9 @@
 #ifndef ERROR_CODES_INCLUDED
 #define ERROR_CODES_INCLUDED
 
-#define TD_OK 0
+enum generalErrorCodes {
+  TD_INVALIDARG = -1,
+  TD_OK = 0
+};
 
 #endif // ERROR_CODES_INCLUDED

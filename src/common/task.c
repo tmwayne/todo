@@ -46,7 +46,7 @@ taskNew()
 int 
 taskSize(const task_T task) 
 {
-  if (!task) return -1;
+  if (!task) return TD_INVALIDARG;
 
   elem_T elem;
   int size = 0;
@@ -55,6 +55,7 @@ taskSize(const task_T task)
   return size;
 }
 
+// TODO: throw error if alloc fails
 void 
 taskSet(task_T task, const char *key, const char *val) 
 {
@@ -73,7 +74,9 @@ taskSet(task_T task, const char *key, const char *val)
     }
   }
 
-  elem = memCalloc(1, sizeof(*elem)); // TODO: check error status here
+  elem = memCalloc(1, sizeof(*elem)); 
+  if (!elem) return;
+
   elem->key = strdup(key);
   elem->val = strdup(val);
 
@@ -179,7 +182,7 @@ taskGetNext(const task_T task)
 int
 taskSwap(task_T old, task_T new)
 {
-  if (!(old && new)) return -1; // TODO: return error code
+  if (!(old && new)) return TD_INVALIDARG;
 
   struct task_T tmp = *old;
 
@@ -187,6 +190,7 @@ taskSwap(task_T old, task_T new)
   new->rlink = old->rlink;
   new->child = old->child;
   new->parent = old->parent;
+  new->level = old->level;
   new->flags |= old->flags; // TODO: double check that we want to do this
   *old = *new;
 
@@ -200,7 +204,7 @@ int
 taskSetFlag(task_T task, const int flags)
 {
   int check = flags & ~(TF_NEW | TF_UPDATE | TF_COMPLETE);
-  if (check) return -1; // TODO: return error code
+  if (check) return TD_INVALIDARG;
 
   task->flags |= flags;
 
@@ -215,3 +219,18 @@ taskGetFlag(task_T task, const int flags)
  else return 0;
 }
 
+int
+taskSetLevel(task_T task, const int level)
+{
+  if (!task && level > 0) return TD_INVALIDARG;
+  task->level = level;
+
+  return TD_OK;
+}
+
+int
+taskGetLevel(const task_T task)
+{
+  if (!task) return TD_INVALIDARG;
+  return task->level;
+}
