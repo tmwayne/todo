@@ -23,7 +23,8 @@
 #include <string.h>          // strlen, strcasecmp
 #include <stdbool.h>         // false
 #include <sqlite3.h>
-#include "task.h"            // task_T
+#include "task.h"
+#include "list.h"
 #include "error-codes.h"
 #include "error-functions.h" // errExit
 

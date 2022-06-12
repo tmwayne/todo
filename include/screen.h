@@ -21,6 +21,8 @@
 #ifndef SCREEN_INCLUDED
 #define SCREEN_INCLUDED
 
+#include "list.h"
+
 enum lineType {
   LT_STR  = 1,
   LT_TASK = 2,

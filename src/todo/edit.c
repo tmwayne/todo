@@ -28,6 +28,7 @@
 #include "error-functions.h" // errExit, fatal
 #include "error-codes.h"     // TD_OK
 #include "task.h"            // elem_T
+#include "list.h"            // list_T
 #include "screen.h"          // line_T, lineType, lineObj
 
 static void

@@ -1,5 +1,6 @@
 noinst_LTLIBRARIES = libcommon.la
 libcommon_la_SOURCES = error-functions.c \
+	list.c \
 	mem.c \
 	screen.c \
 	task.c

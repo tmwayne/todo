@@ -24,8 +24,9 @@
 #include <stdlib.h> // free
 #include <string.h> // strdup
 #include "mem.h"
-#include "task.h"
 #include "error-codes.h"
+#include "task.h"
+#include "list.h"
 #include "screen.h"
 
 struct line_T {

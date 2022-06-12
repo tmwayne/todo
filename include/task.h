@@ -22,6 +22,7 @@
 #define TASK_INCLUDED
 
 #include <stdbool.h> // bool
+#include "task.h"    // task_T
 
 // These need to be multiples of 2
 enum taskFlags {
@@ -30,10 +31,25 @@ enum taskFlags {
   TF_COMPLETE = 4
 };
 
+struct elem_T {
+  char *key;
+  char *val;
+  struct elem_T *link;
+};
+
+struct task_T {
+  struct elem_T *head;   // head of linked list holding data
+  struct elem_T *tail;   // tail of data
+  struct task_T *llink;  // next task in tasks linked list
+  struct task_T *rlink;  // prev task in tasks linked list
+  struct task_T *child;  // head of subtask linked list
+  struct task_T *parent; // parent task, if there is one
+  int    level;         // depth of the task in the list tree
+  int    flags;         // flags for indicating changes to the task
+};
+
 typedef struct elem_T *elem_T;
 typedef struct task_T *task_T;
-typedef struct cat_T  *cat_T;
-typedef struct list_T *list_T;
 
 extern task_T taskNew();
 extern int    taskSize(const task_T); // TODO: rename this
@@ -55,46 +71,10 @@ extern char   *elemVal(const elem_T);
 extern char   *taskValInd(const task_T task, const int ind);
 extern char   *taskKeyInd(const task_T task, const int ind);
 extern int     taskCheckKeys(const task_T);
-extern void    taskFree(task_T *);
-extern task_T  taskFindChildById(const task_T, const char *id);
 extern int     taskSetFlag(task_T, const int flags);
 extern int     taskGetFlag(const task_T, const int flag);
 
-extern char   *catName(const cat_T);
-extern task_T  catGetTask(const cat_T, const task_T);
-extern int     catNumOpen(const cat_T);
-
-extern list_T  listNew(const char *);
-
-/**
- * Tasks are set by their ids. Because this data is stored in the task itself,
- * it doesn't not need to be passed as an argument. We set tasks at the list
- * level and not the category level because a task's category can change, 
- * in which case it needs to be relocated in the list.
- */
-extern int     listSetTask(list_T, task_T);
-extern int     listAddKey(list_T, const char *key);
-extern int     listNumKeys(const list_T);
-extern char  **listGetKeys(const list_T);
-extern int     listContainsKey(const list_T, const char *key);
-extern char   *listName(const list_T);
-
-/**
- * If cat is NULL, returns the first category. If cat is not null, then
- * returns the next category.
- */
-extern cat_T   listGetCat(const list_T, const cat_T);
-extern task_T  listFindTaskById(const list_T, const char *id);
-
-/**
- * Returns an array of tasks that have been updated
- */
-extern task_T *listGetUpdates(const list_T list);
-extern int     listNumUpdates(const list_T list);
-extern int     listClearUpdates(list_T list);
-extern void    listFree(list_T *);
-extern int     listGetMaxId(const list_T);
-
-extern int     markComplete(list_T, task_T);
+extern int     taskSwap(task_T old, task_T new);
+extern void    taskFree(task_T *);
 
 #endif // TASK_INCLUDED
