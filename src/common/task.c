@@ -68,6 +68,7 @@ struct list_T {
   int     keys_len; // length of keys array
   int     ntasks;   // number of tasks
   int     nupdates; // number of updates
+  int     maxid;    // highest id of all tasks 
   int     ncats;    // number of categories
   cat_T   cat;      // categories linked list
 };
@@ -519,6 +520,9 @@ listSetTask(list_T list, task_T task)
     cat->tasks = task;
   }
 
+  int id = strtol(taskGet(task, "id"), NULL, 10);
+  if (id > list->maxid) list->maxid = id;
+
   if (task->flags ^ TF_COMPLETE) cat->nopen++;
   cat->ntasks++;
   list->ntasks++;
@@ -636,6 +640,9 @@ listClearUpdates(list_T list)
   return TD_OK;
 }
 
+// TODO: there is an issue of a tasks that aren't
+// children being included as subtasks
+// TODO: completes aren't being saved to the DB
 int 
 markComplete(list_T list, task_T task)
 {
@@ -656,3 +663,9 @@ markComplete(list_T list, task_T task)
   return TD_OK;
 }
   
+int
+listGetMaxId(const list_T list)
+{
+  if (!list) return 0;
+  else return list->maxid;
+}

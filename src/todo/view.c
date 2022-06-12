@@ -33,6 +33,7 @@
 #include "view.h"
 #include "screen.h"
 
+// TODO: fix cursor so it doesn't reset everytime
 // TODO: enable vertical movement of the cursor
 static void
 viewTaskScreen(list_T list, task_T task)

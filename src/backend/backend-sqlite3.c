@@ -121,6 +121,7 @@ updateTask(list_T list, task_T task)
 
   // TODO: need to guard against SQL injection here
   // TODO: prepare this query dynamically
+  // TODO: add rem
   char sql[MAX_SQL_LEN];
   snprintf(sql, MAX_SQL_LEN,
     "update %s            \
@@ -129,7 +130,8 @@ updateTask(list_T list, task_T task)
       category    = ?3,   \
       name        = ?4,   \
       effort      = ?5,   \
-      priority    = ?6    \
+      priority    = ?6,   \
+      status      = ?7    \
     where id = ?1", 
     listName(list));
 
@@ -163,6 +165,7 @@ updateTask(list_T list, task_T task)
   BIND_TEXT(4, taskGet(task, "name"));
   BIND_TEXT(5, taskGet(task, "effort"));
   BIND_TEXT(6, taskGet(task, "priority"));
+  BIND_TEXT(7, taskGet(task, "status"));
 
   if ((rc = sqlite3_step(stmt)) != SQLITE_DONE)
     sqlErr("Failed to update database: %s", sqlite3_errmsg(db));
@@ -185,8 +188,8 @@ writeNewTask(list_T list, task_T task)
   // TODO: prepare this query dynamically
   char sql[MAX_SQL_LEN];
   snprintf(sql, MAX_SQL_LEN,
-    "insert into %s (id, parent_id, category, name, effort, priority) \
-    values (?1, ?2, ?3, ?4, ?5, ?6)",
+    "insert into %s (id, parent_id, category, name, effort, priority, status) \
+    values (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
     listName(list));
 
   rc = sqlite3_open_v2(
@@ -219,6 +222,7 @@ writeNewTask(list_T list, task_T task)
   BIND_TEXT(4, taskGet(task, "name"));
   BIND_TEXT(5, taskGet(task, "effort"));
   BIND_TEXT(6, taskGet(task, "priority"));
+  BIND_TEXT(7, taskGet(task, "status"));
 
   if ((rc = sqlite3_step(stmt)) != SQLITE_DONE)
     sqlErr("Failed to add task to database: %s", sqlite3_errmsg(db));

@@ -93,6 +93,7 @@ extern task_T *listGetUpdates(const list_T list);
 extern int     listNumUpdates(const list_T list);
 extern int     listClearUpdates(list_T list);
 extern void    listFree(list_T *);
+extern int     listGetMaxId(const list_T);
 
 extern int     markComplete(list_T, task_T);
 

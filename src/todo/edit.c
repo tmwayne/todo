@@ -241,10 +241,14 @@ addTask(list_T list, line_T line)
     taskSet(task, keys[i], NULL);
 
   taskSetFlag(task, TF_NEW);
+  
+  // TODO: can we make this magic number more robust?
 
-  // TODO: need to set an id, do we need to check from backend what
-  // new id should be?
-  taskSet(task, "id", "21"); 
+#define BUF_LEN 16
+  char id[BUF_LEN];
+  snprintf(id, BUF_LEN, "%d", listGetMaxId(list)+1);
+
+  taskSet(task, "id", id); 
 
   switch (lineType(line)) {
   case LT_CAT:
@@ -264,7 +268,5 @@ addTask(list_T list, line_T line)
     errExit("Failed to add task: unable to add task before editing");
 
   editTask(list, task);
-
-  // TODO: do we need to free the original task here?
 }
 
