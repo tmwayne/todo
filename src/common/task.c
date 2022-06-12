@@ -49,6 +49,7 @@ struct task_T {
   task_T child;
   task_T parent;
   int update;   // has the task been edited in the UI
+  int flags; 
 };
 
 // TODO: make naming of linked list heads consistent
@@ -56,6 +57,7 @@ struct task_T {
 struct cat_T {
   char *name;   // name of the category
   int ntasks;   // number of tasks in the task linked list
+  int nopen;    // number of tasks that haven't been completed
   task_T tasks; // task linked list
   cat_T link;   // link to next category
 };
@@ -231,6 +233,19 @@ taskSwap(task_T old, task_T new)
   return TD_OK;
 }
 
+task_T
+taskFindChildById(const task_T task, const char *id)
+{
+  if (!(task && task->child && id)) return NULL;
+  task_T child = task->child;
+  do {
+    if (strcmp(taskGet(child, "id"), id) == 0)
+      return child;
+  } while ((child = catGetTask(NULL, child)));
+
+  return NULL;
+}
+
 // -----------------------------------------------------------------------------
 // Category
 // -----------------------------------------------------------------------------
@@ -273,6 +288,48 @@ catFreeTasks(task_T *task)
   *task = NULL;
 
   return TD_OK;
+}
+
+/**
+ * listGetCategory either fetches the category
+ * matching the argument or creates the category,
+ * if it doesn't exist, then returns it.
+ */
+static cat_T
+getCategory(list_T list, char *name)
+{
+  cat_T cat = NULL;
+
+  for (cat=list->cat; cat; cat=cat->link)
+    if (strcmp(cat->name, name) == 0) return cat;
+
+  cat = memCalloc(1, sizeof(*cat));
+  if (!cat) return NULL; // TODO: return error code
+  cat->name = strdup(name);
+  cat->link = list->cat;
+  list->cat = cat;
+  list->ncats++;
+
+  return cat;
+}
+
+static task_T
+catFindTaskById(const cat_T cat, const char *id)
+{
+  if (!(cat && id)) return NULL;
+  task_T task = NULL;
+  while ((task = catGetTask(cat, task)))
+    if (strcmp(taskGet(task, "id"), id) == 0)
+      return task;
+
+  return NULL;
+}
+
+int
+catNumOpen(const cat_T cat)
+{
+  if (!cat) return 0;
+  return cat->nopen;
 }
 
 // -----------------------------------------------------------------------------
@@ -321,54 +378,6 @@ listFree(list_T *list)
   *list = NULL;
 }
 
-/**
- * listGetCategory either fetches the category
- * matching the argument or creates the category,
- * if it doesn't exist, then returns it.
- */
-static cat_T
-getCategory(list_T list, char *name)
-{
-  cat_T cat = NULL;
-
-  for (cat=list->cat; cat; cat=cat->link)
-    if (strcmp(cat->name, name) == 0) return cat;
-
-  cat = memCalloc(1, sizeof(*cat));
-  if (!cat) return NULL; // TODO: return error code
-  cat->name = strdup(name);
-  cat->link = list->cat;
-  list->cat = cat;
-  list->ncats++;
-
-  return cat;
-}
-
-static task_T
-catFindTaskById(const cat_T cat, const char *id)
-{
-  if (!(cat && id)) return NULL;
-  task_T task = NULL;
-  while ((task = catGetTask(cat, task)))
-    if (strcmp(taskGet(task, "id"), id) == 0)
-      return task;
-
-  return NULL;
-}
-
-task_T
-taskFindChildById(const task_T task, const char *id)
-{
-  if (!(task && task->child && id)) return NULL;
-  task_T child = task->child;
-  do {
-    if (strcmp(taskGet(child, "id"), id) == 0)
-      return child;
-  } while ((child = catGetTask(NULL, child)));
-
-  return NULL;
-}
-
 task_T
 listFindTaskById(const list_T list, const char *id)
 {
@@ -383,6 +392,11 @@ listFindTaskById(const list_T list, const char *id)
   return NULL;
 }
 
+/**
+ * This deletes the category and relinks the list.
+ * It doesn't free the memory held by any tasks in
+ * the category
+ */
 static int
 listDeleteCat(list_T list, cat_T *cat)
 {
@@ -403,12 +417,23 @@ listDeleteCat(list_T list, cat_T *cat)
 }
 
 static int
-listRemoveTask(list_T list, task_T task)
+listPopTask(list_T list, task_T task)
 {
   if (!(list && task)) return -1; // TODO: return error code
 
   cat_T cat = getCategory(list, taskGet(task, "category"));
-  cat->ntasks--;
+
+  list->ntasks--;
+
+  // Update ntask and nopen account based on all children
+  // (starting with the task itself)
+  task_T child = task;
+  do {
+    cat->ntasks--;
+    // Only decrement nopen if the task hasn't been marked as complete
+    if (task->flags ^ TF_COMPLETE) cat->nopen--;
+    child = catGetTask(NULL, child);
+  } while (child && child != task->rlink);
 
   // If we're the only task in the category,
   // then there isn't a parent.
@@ -444,18 +469,16 @@ listSetTask(list_T list, task_T task)
       taskGet(task, "parent_id")) || strcmp(taskGet(old, "category"),
       taskGet(task, "category"));
 
-    if (new_placement) listRemoveTask(list, old); // TODO: check for error
+    if (new_placement) listPopTask(list, old); // TODO: check for error
 
-    list->nupdates += old->update ^ 1;
+    list->nupdates += !(task->flags & TF_UPDATE);
     taskSwap(old, task);
     task = old;
-    task->update = 1;
-
-    if (!(new_placement)) return TD_OK;
+    task->flags |= TF_UPDATE;
 
     // If we have to adjust the placement of the task,
     // then we let it fall through to the next section
-    else list->ntasks--;
+    if (!(new_placement)) return TD_OK;
 
   }
 
@@ -478,6 +501,7 @@ listSetTask(list_T list, task_T task)
     cat->tasks = task;
   }
 
+  if (task->flags ^ TF_COMPLETE) cat->nopen++;
   cat->ntasks++;
   list->ntasks++;
   
@@ -552,7 +576,7 @@ listGetUpdates(const list_T list)
   while ((cat = listGetCat(list, cat))) {
     task = NULL;
     while ((task = catGetTask(cat, task))) {
-      if (task->update) {
+      if (task->flags & TF_UPDATE) {
         if (i >= len - 2) {
           len *= 2;
           updates = realloc(updates, len * sizeof(task_T));
@@ -577,7 +601,7 @@ listClearUpdates(list_T list)
 
     task_T task = NULL;
     while ((task = catGetTask(cat, task)))
-      task->update = 0;
+      task->flags &= ~(TF_UPDATE);
 
   }
   list->nupdates = 0;
@@ -585,12 +609,23 @@ listClearUpdates(list_T list)
   return TD_OK;
 }
 
-// TODO: should this throw an error?
-void
-listMarkTaskUpdated(list_T list, task_T task)
+int 
+markComplete(list_T list, task_T task)
 {
-  if (list && task) {
-    list->nupdates += task->update ^ 1;
-    task->update = 1;
-  }
+  if (!task) return -1; // TODO: return error code
+  cat_T cat = getCategory(list, taskGet(task, "category"));
+  if (!cat) return -1; // TODO: return error code
+
+  task_T stop = task->rlink;
+  do {
+    taskSet(task, "status", "Complete");
+    list->nupdates += !(task->flags & TF_UPDATE);
+    if (task->flags ^ TF_COMPLETE) 
+      cat->nopen--;
+    task->flags |= TF_UPDATE || TF_COMPLETE;
+    task = catGetTask(NULL, task);
+  } while (task && task != stop);
+
+  return TD_OK;
 }
+  

@@ -102,6 +102,8 @@ screenInitialize(screen_T screen, const list_T list)
 {
   cat_T cat = NULL;
   while ((cat = listGetCat(list, cat))) {
+    if (catNumOpen(cat) <= 0) continue;
+
     screenAddLine(screen, LT_CAT, cat, 0); 
 
     task_T task = catGetTask(cat, NULL);
@@ -109,8 +111,7 @@ screenInitialize(screen_T screen, const list_T list)
 
     screenAddTasks(screen, task, 1); // TODO: check return code
 
-    // Blank line between categories
-    screenAddLine(screen, LT_STR, strdup(""), 0);
+    screenAddLine(screen, LT_STR, strdup(""), 0); // add separating line
   }
 
   return TD_OK;

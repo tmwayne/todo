@@ -72,7 +72,6 @@ viewTaskScreen(list_T list, task_T task)
   } while (1);
 }
 
-// TODO: hide categories whose tasks are all complete
 static int
 viewListScreen(screen_T screen, list_T list)
 {
@@ -82,7 +81,6 @@ viewListScreen(screen_T screen, list_T list)
   // TODO: add ability to hide lines
 
   int row = 0;
-  // mvaddstr(row++, 0, "# Task Tracker");
 
   line_T first_line = screenGetFirstLine(screen);
   line_T line = first_line;
@@ -341,7 +339,6 @@ eventLoop()
       }
       break;
 
-    // TODO: marking complete should hide all children as well
     case 'x':
       if (lineType(line) == LT_TASK) {
         getyx(stdscr, save_row, save_col);
@@ -351,7 +348,6 @@ eventLoop()
         if (answer != 'y') {
           statusMessage("Task left unchanged.");
         } else do {
-            // TODO: this should only by for unfinished subtasks
             if (taskGetSubtask(task)) {
               statusMessage("Mark all subtasks as complete? (y/n) ");
               answer = getch();
@@ -389,8 +385,8 @@ view(int argc, char **argv)
 {
 
   initscr();
-  cbreak();   // disable line buffering
-  noecho();   // disable echo for getch
+  cbreak();
+  noecho();
 
   eventLoop();
 

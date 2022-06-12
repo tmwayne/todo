@@ -20,7 +20,7 @@
 
 #include <stdio.h>           // fprintf
 #include <stdlib.h>          // NULL
-#include <string.h>          // strlen
+#include <string.h>          // strlen, strcasecmp
 #include <stdbool.h>         // false
 #include <sqlite3.h>
 #include "task.h"            // task_T
@@ -68,11 +68,11 @@ readTasks(list_T *list)
     sqlErr("Can't open database: %s", sqlite3_errmsg(db));
 
   rc = sqlite3_prepare_v2(
-    db,                // db handle
-    sql,               // sql statement
-    strlen(sql)+1,     // maximum length of sql, in bytes (including '\0')
-    &stmt,             // out: statement handle
-    NULL               // out: point to unused portion of sql
+    db,                    // db handle
+    sql,                   // sql statement
+    strlen(sql)+1,         // maximum length of sql, in bytes (including '\0')
+    &stmt,                 // out: statement handle
+    NULL                   // out: point to unused portion of sql
   );
 
   if (rc != SQLITE_OK) 
@@ -96,8 +96,10 @@ readTasks(list_T *list)
       taskSet(task, sqlite3_column_name(stmt, i), 
         (char *) sqlite3_column_text(stmt, i));
 
-    // listAddTask(*list, task);
-    listSetTask(*list, task);
+    if (taskCheckKeys(task) != TD_OK) return -1;
+
+    if (strcasecmp(taskGet(task, "status"), "Complete") != 0)
+      listSetTask(*list, task);
 
   }
 
@@ -148,15 +150,6 @@ updateTask(char *list_name, task_T task)
 
   if (rc != SQLITE_OK) 
     sqlErr("Unable to prepare SQL for update tasks: %s", sqlite3_errmsg(db));
-
-  // Need to check if the value before binding it to the SQL statement
-
-#define BIND_INT(ind, val) do {                               \
-  if ((val) == 0)                                             \
-    sqlite3_bind_null(stmt, (ind));                           \
-  else                                                        \
-    sqlite3_bind_int(stmt, (ind), (val));                     \
-  } while (0);
 
 #define BIND_TEXT(ind, val) \
   sqlite3_bind_text(stmt, (ind), (val), -1, SQLITE_STATIC);

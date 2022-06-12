@@ -151,6 +151,8 @@ parseEditedFile(const char *pathname, task_T task)
   return TD_OK;
 }
 
+// TODO: changing category of parent task should change
+// category of child tasks as well
 static int
 enforceParentCategory(const list_T list, task_T edit)
 {
@@ -233,22 +235,3 @@ editTask(list_T list, task_T task)
   
 }
 
-// TODO: hide category if all tasks are marked as complete
-int 
-markComplete(list_T list, task_T task)
-{
-  if (!task) return -1; // TODO: return error code
-
-  taskSet(task, "status", "Complete");
-  listMarkTaskUpdated(list, task);
-
-  task_T child = taskGetSubtask(task);
-  while (child) {
-    taskSet(child, "status", "Complete");
-    listMarkTaskUpdated(list, child);
-    child = catGetTask(NULL, child);
-  }
-
-  return TD_OK;
-}
-  

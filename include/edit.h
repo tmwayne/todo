@@ -24,6 +24,5 @@
 #include "task.h" // task_T
 
 extern int editTask(list_T, task_T);
-extern int markComplete(list_T, task_T);
 
 #endif // TD_EDIT_INCLUDED

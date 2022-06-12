@@ -23,6 +23,12 @@
 
 #include <stdbool.h> // bool
 
+// These need to be multiples of 2
+enum taskFlags {
+  TF_UPDATE   = 1,
+  TF_COMPLETE = 2
+};
+
 typedef struct elem_T *elem_T;
 typedef struct task_T *task_T;
 typedef struct cat_T  *cat_T;
@@ -53,6 +59,7 @@ extern task_T  taskFindChildById(const task_T, const char *id);
 
 extern char   *catName(const cat_T);
 extern task_T  catGetTask(const cat_T, const task_T);
+extern int     catNumOpen(const cat_T);
 
 extern list_T  listNew(const char *);
 
@@ -79,8 +86,9 @@ extern task_T  listFindTaskById(const list_T, const char *id);
  */
 extern task_T *listGetUpdates(const list_T list);
 extern int     listNumUpdates(const list_T list);
-extern void    listMarkTaskUpdated(list_T, task_T);
 extern int     listClearUpdates(list_T list);
 extern void    listFree(list_T *);
+
+extern int     markComplete(list_T, task_T);
 
 #endif // TASK_INCLUDED
