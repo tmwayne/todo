@@ -21,8 +21,10 @@
 #ifndef TD_EDIT_INCLUDED
 #define TD_EDIT_INCLUDED
 
-#include "task.h" // task_T
+#include "task.h"   // list_T, task_T
+#include "screen.h" // line_T
 
 extern void editTask(list_T, task_T);
+extern void addTask(list_T, line_T);
 
 #endif // TD_EDIT_INCLUDED

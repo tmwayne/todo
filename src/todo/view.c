@@ -67,8 +67,8 @@ viewTaskScreen(list_T list, task_T task)
   } while (1);
 }
 
-static int
-viewListScreen(screen_T screen, list_T list)
+static void
+viewListScreen(const screen_T screen, const list_T list)
 {
   clear();
   
@@ -99,8 +99,8 @@ viewListScreen(screen_T screen, list_T list)
       val = taskGet((task_T) lineObj(line), "name");
       break;
 
-    default:
-      return -1;
+    default: // ignore unrecognized types
+      break;
     }
 
     move(row, 0);
@@ -116,8 +116,6 @@ viewListScreen(screen_T screen, list_T list)
 
     row++;
   }
-
-  return TD_OK;
 }
 
 static void
@@ -253,9 +251,15 @@ eventLoop()
     clearStatusLine();
 
     switch (c) {
+
+    case 'a': // Add task
+      if (lineType(line) == LT_CAT || lineType(line) == LT_TASK) {
+        addTask(list, line);
+        redraw = true;
+      }
+      break;
     
-    // Edit task
-    case 'e':
+    case 'e': // Edit task
       if (lineType(line) == LT_TASK) {
         // getyx(stdscr, save_row, save_col);
         editTask(list, (task_T) lineObj(line));
@@ -263,23 +267,19 @@ eventLoop()
       }
       break;
 
-    // View help screen
-    case 'h':
+    case 'h': // View help screen
       viewHelpScreen();
       break;
 
-    // Move cursor down
-    case 'j':
+    case 'j': // Move cursor down
       moveDown(screen, &line);
       break;
 
-    // Move cursor up
-    case 'k':
+    case 'k': // Move cursor up
       moveUp(screen, &line);
       break;
 
-    // Quit
-    case 'q':
+    case 'q': // Quit
       if (listNumUpdates(list) == 0) return;
       else {
         getyx(stdscr, save_row, save_col);
@@ -296,8 +296,7 @@ eventLoop()
       }
       break;
             
-    // Save changes
-    case 's':
+    case 's': // Save changes
       getyx(stdscr, save_row, save_col);
       if (listNumUpdates(list) == 0) {
         statusMessage("No updates to save.");
@@ -315,18 +314,17 @@ eventLoop()
       move(save_row, save_col);
       break;
 
-    // View task
-    case 'v':
+    case 'v': // View task
       if (lineType(line) == LT_TASK) {
         getyx(stdscr, save_row, save_col);
         
-        // TODO: check if task was edited
+        // TODO: check if task was actually modified
         viewTaskScreen(list, (task_T) lineObj(line));
         redraw = true;
       }
       break;
 
-    case 'x':
+    case 'x': // Mark task as complete
       if (lineType(line) == LT_TASK) {
         getyx(stdscr, save_row, save_col);
         task = (task_T) lineObj(line);

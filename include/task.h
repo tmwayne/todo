@@ -25,8 +25,9 @@
 
 // These need to be multiples of 2
 enum taskFlags {
-  TF_UPDATE   = 1,
-  TF_COMPLETE = 2
+  TF_NEW      = 1,
+  TF_UPDATE   = 2,
+  TF_COMPLETE = 4
 };
 
 typedef struct elem_T *elem_T;
@@ -56,6 +57,8 @@ extern char   *taskKeyInd(const task_T task, const int ind);
 extern int     taskCheckKeys(const task_T);
 extern void    taskFree(task_T *);
 extern task_T  taskFindChildById(const task_T, const char *id);
+extern int     taskSetFlag(task_T, const int flags);
+extern int     taskGetFlag(const task_T, const int flag);
 
 extern char   *catName(const cat_T);
 extern task_T  catGetTask(const cat_T, const task_T);
@@ -71,6 +74,8 @@ extern list_T  listNew(const char *);
  */
 extern int     listSetTask(list_T, task_T);
 extern int     listAddKey(list_T, const char *key);
+extern int     listNumKeys(const list_T);
+extern char  **listGetKeys(const list_T);
 extern int     listContainsKey(const list_T, const char *key);
 extern char   *listName(const list_T);
 

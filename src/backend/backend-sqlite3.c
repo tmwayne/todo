@@ -109,26 +109,29 @@ readTasks(list_T *list)
   return TD_OK;
 }
 
-static int
-updateTask(char *list_name, task_T task)
+static void
+updateTask(list_T list, task_T task)
 {
   sqlite3 *db;
   sqlite3_stmt *stmt;
   int rc;
 
+  if (!(list && task))
+    errExit("Failed to write changes: null pointer passed as argument");
+
   // TODO: need to guard against SQL injection here
   // TODO: prepare this query dynamically
   char sql[MAX_SQL_LEN];
   snprintf(sql, MAX_SQL_LEN,
-    "update %s          \
-    set                 \
+    "update %s            \
+    set                   \
       parent_id   = ?2,   \
       category    = ?3,   \
       name        = ?4,   \
       effort      = ?5,   \
       priority    = ?6    \
     where id = ?1", 
-    list_name);
+    listName(list));
 
   rc = sqlite3_open_v2(
     FILENAME,              // filename
@@ -141,11 +144,11 @@ updateTask(char *list_name, task_T task)
     sqlErr("Unable to open database: %s", sqlite3_errmsg(db));
 
   rc = sqlite3_prepare_v2(
-    db,                // db handle
-    sql,               // sql statement
-    strlen(sql)+1,     // maximum length of sql, in bytes (including '\0')
-    &stmt,             // out: statement handle
-    NULL               // out: point to unused portion of sql
+    db,                    // db handle
+    sql,                   // sql statement
+    strlen(sql)+1,         // maximum length of sql, in bytes (including '\0')
+    &stmt,                 // out: statement handle
+    NULL                   // out: point to unused portion of sql
   );
 
   if (rc != SQLITE_OK) 
@@ -166,8 +169,62 @@ updateTask(char *list_name, task_T task)
 
   sqlite3_finalize(stmt);
   sqlite3_close(db);
+}
 
-  return TD_OK;
+static void
+writeNewTask(list_T list, task_T task)
+{
+  sqlite3 *db;
+  sqlite3_stmt *stmt;
+  int rc;
+
+  if (!(list && task))
+    errExit("Failed to write changes: null pointer passed as argument");
+
+  // TODO: need to guard against SQL injection here
+  // TODO: prepare this query dynamically
+  char sql[MAX_SQL_LEN];
+  snprintf(sql, MAX_SQL_LEN,
+    "insert into %s (id, parent_id, category, name, effort, priority) \
+    values (?1, ?2, ?3, ?4, ?5, ?6)",
+    listName(list));
+
+  rc = sqlite3_open_v2(
+    FILENAME,              // filename
+    &db,                   // db handle
+    SQLITE_OPEN_READWRITE, // don't create if database doesn't exist
+    NULL                   // OS interface for db connection
+  );
+
+  if (rc != SQLITE_OK)
+    sqlErr("Unable to open database: %s", sqlite3_errmsg(db));
+
+  rc = sqlite3_prepare_v2(
+    db,                    // db handle
+    sql,                   // sql statement
+    strlen(sql)+1,         // maximum length of sql, in bytes (including '\0')
+    &stmt,                 // out: statement handle
+    NULL                   // out: point to unused portion of sql
+  );
+
+  if (rc != SQLITE_OK) 
+    sqlErr("Unable to prepare SQL for update tasks: %s", sqlite3_errmsg(db));
+
+#define BIND_TEXT(ind, val) \
+  sqlite3_bind_text(stmt, (ind), (val), -1, SQLITE_STATIC);
+
+  BIND_TEXT(1, taskGet(task, "id")); // should never be NULL
+  BIND_TEXT(2, taskGet(task, "parent_id"));
+  BIND_TEXT(3, taskGet(task, "category"));
+  BIND_TEXT(4, taskGet(task, "name"));
+  BIND_TEXT(5, taskGet(task, "effort"));
+  BIND_TEXT(6, taskGet(task, "priority"));
+
+  if ((rc = sqlite3_step(stmt)) != SQLITE_DONE)
+    sqlErr("Failed to add task to database: %s", sqlite3_errmsg(db));
+
+  sqlite3_finalize(stmt);
+  sqlite3_close(db);
 }
 
 int
@@ -180,8 +237,10 @@ writeUpdates(list_T list)
 
   // TODO: if there is an error, this will do a partial write.
   // See if we can rollback if there's an error.
-  for (int i=0; updates[i]; i++)
-    if (updateTask(listName(list), updates[i]) != TD_OK) return -1;
+  for (int i=0; updates[i]; i++) {
+    if (taskGetFlag(updates[i], TF_NEW)) writeNewTask(list, updates[i]);
+    else updateTask(list, updates[i]);
+  }
 
   free(updates);
   listClearUpdates(list);

@@ -48,29 +48,28 @@ struct task_T {
   task_T rlink;
   task_T child;
   task_T parent;
-  int update;   // has the task been edited in the UI
-  int flags; 
+  int    flags; 
 };
 
 // TODO: make naming of linked list heads consistent
 // some use the singular, some use the plural
 struct cat_T {
-  char *name;   // name of the category
-  int ntasks;   // number of tasks in the task linked list
-  int nopen;    // number of tasks that haven't been completed
-  task_T tasks; // task linked list
-  cat_T link;   // link to next category
+  char   *name;     // name of the category
+  int     ntasks;   // number of tasks in the task linked list
+  int     nopen;    // number of tasks that haven't been completed
+  task_T  tasks;    // task linked list
+  cat_T   link;     // link to next category
 };
 
 struct list_T {
-  char *name;   // name of list
-  char **keys;  // array of keys each of the tasks should have
-  int nkeys;    // number of keys
-  int keys_len; // length of keys array
-  int ntasks;   // number of tasks
-  int nupdates; // number of updates
-  int ncats;    // number of categories
-  cat_T cat;    // categories linked list
+  char   *name;     // name of list
+  char  **keys;     // array of keys each of the tasks should have
+  int     nkeys;    // number of keys
+  int     keys_len; // length of keys array
+  int     ntasks;   // number of tasks
+  int     nupdates; // number of updates
+  int     ncats;    // number of categories
+  cat_T   cat;      // categories linked list
 };
 
 task_T 
@@ -225,6 +224,7 @@ taskSwap(task_T old, task_T new)
   new->rlink = old->rlink;
   new->child = old->child;
   new->parent = old->parent;
+  new->flags |= old->flags; // TODO: double check that we want to do this
   *old = *new;
 
   *new = tmp;
@@ -244,6 +244,25 @@ taskFindChildById(const task_T task, const char *id)
   } while ((child = catGetTask(NULL, child)));
 
   return NULL;
+}
+
+int
+taskSetFlag(task_T task, const int flags)
+{
+  int check = flags & ~(TF_NEW | TF_UPDATE | TF_COMPLETE);
+  if (check) return -1; // TODO: return error code
+
+  task->flags |= flags;
+
+  return TD_OK;
+}
+
+int
+taskGetFlag(task_T task, const int flags)
+{
+ // `& flags` is a bit-mask for non-relevant bits
+ if (~(task->flags ^ flags) & flags) return 1;
+ else return 0;
 }
 
 // -----------------------------------------------------------------------------
@@ -471,15 +490,14 @@ listSetTask(list_T list, task_T task)
 
     if (new_placement) listPopTask(list, old); // TODO: check for error
 
-    list->nupdates += !(task->flags & TF_UPDATE);
+    list->nupdates += !(old->flags & TF_UPDATE);
     taskSwap(old, task);
     task = old;
-    task->flags |= TF_UPDATE;
+    // task->flags |= TF_UPDATE;
 
     // If we have to adjust the placement of the task,
     // then we let it fall through to the next section
     if (!(new_placement)) return TD_OK;
-
   }
 
   // If it doesn't check for an existing parent
@@ -531,17 +549,26 @@ listName(const list_T list)
 }
 
 int
-listKeySize(const list_T list)
+listNumKeys(const list_T list)
 {
   if (!list) return -1; // TODO: return error code
   else return list->nkeys;
 }
 
+// TODO: make this interface consistent with the other ones
+char **
+listGetKeys(const list_T list)
+{
+  if (!list) return NULL;
+  else return list->keys;
+}
+
 int
 listContainsKey(const list_T list, const char *key)
 {
-  for (int i=0; i < listKeySize(list); i++)
-    if (strcmp(list->keys[i], key) == 0) return 1;
+  for (int i=0; i < listNumKeys(list); i++)
+    if (strcmp(list->keys[i], key) == 0) 
+      return 1;
 
   return 0;
 }
@@ -622,7 +649,7 @@ markComplete(list_T list, task_T task)
     list->nupdates += !(task->flags & TF_UPDATE);
     if (task->flags ^ TF_COMPLETE) 
       cat->nopen--;
-    task->flags |= TF_UPDATE || TF_COMPLETE;
+    task->flags |= TF_UPDATE | TF_COMPLETE;
     task = catGetTask(NULL, task);
   } while (task && task != stop);
 

@@ -28,6 +28,7 @@
 #include "error-functions.h" // errExit, fatal
 #include "error-codes.h"     // TD_OK
 #include "task.h"            // elem_T
+#include "screen.h"          // line_T, lineType, lineObj
 
 static void
 writeTaskToTmpFile(char *template, const task_T task)
@@ -201,9 +202,14 @@ validateEditedTask(const list_T list, task_T edit)
 void
 editTask(list_T list, task_T task)
 {
+  if (!(list && task))
+    errExit("Failed to edit task: null pointer passed as argument");
+  
   task_T edit = taskNew();
   taskSet(edit, "id", taskGet(task, "id"));
   taskSet(edit, "category", taskGet(task, "category"));
+
+  taskSetFlag(edit, TF_UPDATE);
 
   char pathname[] = "/tmp/task-XXXXXX";
   writeTaskToTmpFile(pathname, task);
@@ -218,5 +224,47 @@ editTask(list_T list, task_T task)
 
   if (listSetTask(list, edit) != TD_OK)
     errExit("Failed to edit task: unable to update task in list");
+}
+
+
+// TODO: how do we validate that a meaningful task was created?
+void
+addTask(list_T list, line_T line)
+{
+  if (!(list && line))
+    errExit("Failed to add task: null pointer passed as argument");
+
+  task_T task = taskNew();
+  char **keys = listGetKeys(list);
+
+  for (int i=0; i < listNumKeys(list); i++)
+    taskSet(task, keys[i], NULL);
+
+  taskSetFlag(task, TF_NEW);
+
+  // TODO: need to set an id, do we need to check from backend what
+  // new id should be?
+  taskSet(task, "id", "21"); 
+
+  switch (lineType(line)) {
+  case LT_CAT:
+    taskSet(task, "category", catName((cat_T) lineObj(line)));
+    break;
+  
+  case LT_TASK:
+    taskSet(task, "parent_id", taskGet((task_T) lineObj(line), "id"));
+    taskSet(task, "category", taskGet((task_T) lineObj(line), "category"));
+    break;
+
+  default:
+    break;
+  }
+
+  if (listSetTask(list, task) != TD_OK)
+    errExit("Failed to add task: unable to add task before editing");
+
+  editTask(list, task);
+
+  // TODO: do we need to free the original task here?
 }
 
