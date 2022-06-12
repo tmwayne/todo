@@ -34,7 +34,7 @@
 #include "screen.h"
 
 // TODO: enable vertical movement of the cursor
-static int
+static void
 viewTaskScreen(list_T list, task_T task)
 {
   int row;
@@ -60,14 +60,9 @@ viewTaskScreen(list_T list, task_T task)
     refresh();
     c = getch();
 
-    if (c == 'e') {
-      if (editTask(list, task) != TD_OK) {
-        endwin();
-        errExit("Failed editing task");
-      }
-    }
+    if (c == 'e') editTask(list, task);
       
-    else return TD_OK;
+    else return;
 
   } while (1);
 }
@@ -88,7 +83,8 @@ viewListScreen(screen_T screen, list_T list)
   for (line_T line=first_line; line; line=lineGetNext(line)) {
     char *val;
     int level = lineLevel(line);
-    if (level < 0) return -1; // TODO: return error code
+    if (level < 0) 
+      errExit("Failed to render list screen: indent level less than 0");
     int type = lineType(line);
     switch (type) {
     case LT_STR:
@@ -124,11 +120,12 @@ viewListScreen(screen_T screen, list_T list)
   return TD_OK;
 }
 
-static int
+static void
 pageHelp(char *filename)
 {
   char *pager = getenv("PAGER");
-  if (pager == NULL) return -1;
+  if (pager == NULL) 
+    errExit("Failed to open help: PAGER environment variable unset"); 
 
 #define MAX_CMD_LEN 256
   char command[MAX_CMD_LEN];
@@ -140,22 +137,19 @@ pageHelp(char *filename)
 
   int status = system(command);
   if (status == -1) {
-    return -1; // TODO: return error code
+    sysErrExit("Failed to open help: pager process could not be created");
   } else {
     if (WIFEXITED(status) && WEXITSTATUS(status) == 127)
-      return -1; // TODO: return error code
-      // fatal("Editor returned 127, likely unable to invoke shell");
-    // else
-      // TODO: check return status of shell
-      // printWaitStatus(NULL, status);
+      errExit("Editor returned 127, likely unable to invoke shell");
+    // We don't know which editor is used so we dont' check the exit
+    // code of the editor command which would be 128+n where n
+    // is the exit code of the editor
   }
 
   refresh(); // restore save modes, repaint screen
-
-  return TD_OK;
 }
 
-static int
+static void
 viewHelpScreen()
 {
 
@@ -165,15 +159,17 @@ viewHelpScreen()
   char filename[] = "/tmp/help-XXXXXX";
 
   int fd = mkstemp(filename);
-  if (fd == -1) return -1; // TODO: return error code
+  if (fd == -1) 
+    errExit("Failed to open help: unable to make temp file");
 
-  if (dprintf(fd, "%s", help) < 0) return -1;
-  if (close(fd) == -1) return -1; // TODO: return error code
+  if (dprintf(fd, "%s", help) < 0) 
+    errExit("Failed to open help: unable to copy help text to temp file");
 
-  if (pageHelp(filename) != TD_OK) return -1;
+  if (close(fd) == -1) 
+    errExit("Failed to open help: unable to close temp file");
+
+  pageHelp(filename);
   unlink(filename);
-  
-  return TD_OK;
 }
 
 // TODO: rerender if at end of window but screen isn't exhausted
@@ -261,21 +257,15 @@ eventLoop()
     // Edit task
     case 'e':
       if (lineType(line) == LT_TASK) {
-        getyx(stdscr, save_row, save_col);
-        if (editTask(list, (task_T) lineObj(line)) != TD_OK) {
-          endwin();
-          errExit("Failed editing task");
-        }
+        // getyx(stdscr, save_row, save_col);
+        editTask(list, (task_T) lineObj(line));
         redraw = true;
       }
       break;
 
     // View help screen
     case 'h':
-      if (viewHelpScreen() != TD_OK) {
-        endwin();
-        errExit("Failed opening help");
-      }
+      viewHelpScreen();
       break;
 
     // Move cursor down
@@ -317,11 +307,8 @@ eventLoop()
       statusMessage("Save changes? (y/n) ");
       answer = getch();
       if (answer == 'y') {
-        if (writeUpdates(list) == TD_OK) {
-          statusMessage("Changes successfully saved to backend.");
-        } else {
-          statusMessage("Unable to save changes to backend.");
-        }
+        writeUpdates(list);
+        statusMessage("Changes successfully saved to backend.");
       } else
         statusMessage("Changes not saved to backend.");
 
@@ -380,17 +367,23 @@ eventLoop()
   }
 }
 
+static void
+endwinAtExit()
+{
+  endwin();
+}
+
 void
 view(int argc, char **argv)
 {
+  // Register this exit handler so that we can exit
+  // the program within functions when errors occur
+  atexit(endwinAtExit);
 
   initscr();
   cbreak();
   noecho();
 
   eventLoop();
-
-  if (endwin() == ERR)
-    errExit("Curses failed to close properly");
 }
 

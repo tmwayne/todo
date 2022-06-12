@@ -175,7 +175,8 @@ writeUpdates(list_T list)
 {
   task_T *updates = listGetUpdates(list);
 
-  if (updates == NULL) return -1; // TODO: return error code
+  if (!updates)
+    errExit("Failed to write updates: null pointer passed as argument"); 
 
   // TODO: if there is an error, this will do a partial write.
   // See if we can rollback if there's an error.
