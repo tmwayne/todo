@@ -25,6 +25,10 @@
 #include <string.h>          // getline
 #include <ctype.h>           // isspace
 #include <errno.h>           // errno
+#include <sys/stat.h>        // fstat
+#include <sys/mman.h>        // mmap, munmap, MAP_FAILED
+#include <inttypes.h>        // uint32_t, uint8_t
+#include <fcntl.h>           // open
 #include "error-functions.h" // errExit, fatal
 #include "error-codes.h"     // TD_OK
 #include "task.h"            // elem_T
@@ -51,8 +55,79 @@ writeTaskToTmpFile(char *template, const task_T task)
 
 }
 
+// http://www.rosettacode.org/wiki/CRC-32#C
+static uint32_t
+crc32(uint32_t crc, const char *buf, size_t len)
+{
+  uint32_t table[256];
+  int have_table = 0;
+  uint32_t rem;
+  uint8_t octet;
+  int i, j;
+  const char *p, *q;
+
+  // This check is not thread safe, there is no mutex
+  if (have_table == 0) {
+
+    // Calculate CRC table
+    for (i = 0; i < 256; i++) {
+      rem = i; // remainder from polynomial division
+      for (j = 0; j < 8; j++) {
+        if (rem & 1) {
+          rem >>= 1;
+          rem ^= 0xedb88320;
+        } else
+          rem >>= 1;
+      }
+      table[i] = rem;
+    }
+    have_table = 1;
+  }
+
+  crc = ~crc;
+  q = buf + len;
+  for (p = buf; p < q; p++) {
+    octet = *p; // cast to unsigned octet
+    crc = (crc >> 8) ^ table[(crc & 0xff) ^ octet];
+  }
+
+  return ~crc;
+}
+
+/**
+ * If any of the system calls fail, then we return 0 and parse the
+ * file regardless. We do exit the program if the system calls
+ * to release the resources fail.
+ */
+static uint32_t
+genCRC32(const char *pathname)
+{
+  int fd;
+  struct stat statbuf;
+  char *buf;
+
+  if ((fd = open(pathname, O_RDONLY)) == -1) return 0;
+  
+  if (fstat(fd, &statbuf) == -1) return 0;
+
+  buf = mmap(0, statbuf.st_size, PROT_READ, MAP_SHARED, fd, 0);
+  if (buf == MAP_FAILED) return 0;
+
+  uint32_t crc = crc32(0, (const char *) buf, statbuf.st_size);
+
+  if (munmap(buf, statbuf.st_size) == -1)
+    sysErrExit("Failed to edit file: unable to unmap temp file for crc-32");
+
+  if (close(fd) == -1)
+    sysErrExit("Failed to edit file: unable to close temp file for crc-32");
+
+  return crc;
+
+}
+
+
 // TODO: need version when not in view (curses) mode
-static void
+static int
 editTmpFile(const char *pathname)
 {
   char *editor = getenv("EDITOR");
@@ -62,6 +137,8 @@ editTmpFile(const char *pathname)
 #define MAX_CMD_LEN 256
   char command[MAX_CMD_LEN];
   int n = snprintf(command, MAX_CMD_LEN-1, "%s %s", editor, pathname);
+
+  uint32_t hash_before = genCRC32(pathname);
 
   if (def_prog_mode() == ERR)
     errExit("Failed to open editor: terminal process not created"); 
@@ -76,6 +153,11 @@ editTmpFile(const char *pathname)
   }
 
   refresh(); // restore save modes, repaint screen
+
+  uint32_t hash_after = genCRC32(pathname);
+
+  return (!hash_before || hash_before != hash_after) ? ET_MOD : ET_UNMOD;
+
 }
 
 static int
@@ -199,8 +281,7 @@ validateEditedTask(const list_T list, task_T edit)
   }
 }
 
-// TODO: check if any edit was actually made
-void
+int
 editTask(list_T list, task_T task)
 {
   if (!(list && task))
@@ -215,7 +296,15 @@ editTask(list_T list, task_T task)
   char pathname[] = "/tmp/task-XXXXXX";
   writeTaskToTmpFile(pathname, task);
 
-  editTmpFile(pathname);
+  int rc = editTmpFile(pathname);
+
+  // If the first hash is zero or the hashes are different
+  // then the file has been edited.
+  if (rc == ET_UNMOD) {
+    taskFree(&edit);
+    unlink(pathname);
+    return ET_UNMOD;
+  }
 
   parseEditedFile(pathname, edit);
 
@@ -225,6 +314,8 @@ editTask(list_T list, task_T task)
 
   if (listSetTask(list, edit) != TD_OK)
     errExit("Failed to edit task: unable to update task in list");
+
+  return ET_MOD;
 }
 
 

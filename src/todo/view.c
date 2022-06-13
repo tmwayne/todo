@@ -38,7 +38,7 @@
 static void
 viewTaskScreen(list_T list, task_T task)
 {
-  int row;
+  int row, out;
   char c;
   char buf[16]; // holds a 15 digit char
 
@@ -263,8 +263,8 @@ eventLoop()
     case 'e': // Edit task
       if (lineType(line) == LT_TASK) {
         // getyx(stdscr, save_row, save_col);
-        editTask(list, (task_T) lineObj(line));
-        redraw = true;
+        if (editTask(list, (task_T) lineObj(line)) == ET_MOD)
+          redraw = true;
       }
       break;
 
@@ -321,7 +321,6 @@ eventLoop()
       if (lineType(line) == LT_TASK) {
         getyx(stdscr, save_row, save_col);
         
-        // TODO: check if task was actually modified
         viewTaskScreen(list, (task_T) lineObj(line));
         redraw = true;
       }

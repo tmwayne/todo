@@ -21,9 +21,14 @@
 #ifndef ERROR_CODES_INCLUDED
 #define ERROR_CODES_INCLUDED
 
-enum generalErrorCodes {
-  TD_INVALIDARG = -1,
+enum generalReturnCode {
+  TD_INVALIDARG = -1, // one of the arguments is invalid
   TD_OK = 0
+};
+
+enum editReturnCodes {
+  ET_UNMOD = 0,       // task wasn't modified
+  ET_MOD = 1          // task was modified
 };
 
 #endif // ERROR_CODES_INCLUDED

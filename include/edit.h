@@ -25,7 +25,7 @@
 #include "list.h"   // list_T
 #include "screen.h" // line_T
 
-extern void editTask(list_T, task_T);
+extern int  editTask(list_T, task_T);
 extern void addTask(list_T, line_T);
 
 #endif // TD_EDIT_INCLUDED
