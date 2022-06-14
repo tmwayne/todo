@@ -130,20 +130,20 @@ pageHelp(char *filename)
   char command[MAX_CMD_LEN];
   int n = snprintf(command, MAX_CMD_LEN-1, "%s %s", pager, filename);
 
-  // TODO: check return code
-  def_prog_mode(); // save current tty modes
+  if (def_prog_mode() == ERR)
+    errExit("Failed to open pager: terminal process not created"); 
+
   endwin();
 
   int status = system(command);
-  if (status == -1) {
+  if (status == -1)
     sysErrExit("Failed to open help: pager process could not be created");
-  } else {
-    if (WIFEXITED(status) && WEXITSTATUS(status) == 127)
-      errExit("Editor returned 127, likely unable to invoke shell");
-    // We don't know which editor is used so we dont' check the exit
-    // code of the editor command which would be 128+n where n
-    // is the exit code of the editor
-  }
+
+  else if (WIFEXITED(status) && WEXITSTATUS(status) == 127)
+    errExit("Editor returned 127, likely unable to invoke shell");
+  // We don't know which editor is used so we dont' check the exit
+  // code of the editor command, which would be 128+n where n
+  // is the exit code of the editor
 
   refresh(); // restore save modes, repaint screen
 }
@@ -223,14 +223,13 @@ moveUp(const screen_T screen, line_T *line)
 
 
 static void 
-eventLoop()
+eventLoop(char *listname, char *filename)
 {
-
   screen_T screen = screenNew();
-  list_T list = listNew("default_list");
+  list_T list = listNew(listname);
   task_T task;
 
-  readTasks(list); 
+  readTasks(list, filename);
   screenInitialize(screen, list);
 
   viewListScreen(screen, list);
@@ -287,7 +286,7 @@ eventLoop()
         statusMessage("Save changes before quitting? (y/n) ");
         answer = getch();
         if (answer != 'y') return;
-        else if (writeUpdates(list) == TD_OK) return;
+        else if (writeUpdates(list, filename) == TD_OK) return;
         else {
           statusMessage("Unable to save changes. Quit anyway? (y/n) ");
           answer = getch();
@@ -307,7 +306,7 @@ eventLoop()
       statusMessage("Save changes? (y/n) ");
       answer = getch();
       if (answer == 'y') {
-        writeUpdates(list);
+        writeUpdates(list, filename);
         statusMessage("Changes successfully saved to backend.");
       } else
         statusMessage("Changes not saved to backend.");
@@ -374,7 +373,7 @@ endwinAtExit()
 }
 
 void
-view(int argc, char **argv)
+view(char *listname, char *filename)
 {
   // Register this exit handler so that we can exit
   // the program within functions when errors occur
@@ -384,6 +383,6 @@ view(int argc, char **argv)
   cbreak();
   noecho();
 
-  eventLoop();
+  eventLoop(listname, filename);
 }
 

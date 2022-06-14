@@ -42,7 +42,9 @@ Usage: %s [OPTIONS...] COMMAND                              \n\
 Manage todo lists                                           \n\
                                                             \n\
 Options:                                                    \n\
+  -f, --filename=NAME       Load todo list from NAME        \n\
   -h, --help                Print this help                 \n\
+  -l, --listname=NAME       Load todo list NAME             \n\
   -v, --version             Print version info              \n\
                                                             \n\
 Commands:                                                   \n\
@@ -57,31 +59,46 @@ int
 main(int argc, char **argv)
 {
 
+  char *filename = "test/data/test-db.sqlite3";
+  char *listname = "default_list";
+
   int option_index = 0;
   struct option longopts[] = {
-    {"version",   no_argument,  0,  'V' },
-    {"help",      no_argument,  0,  'h' },
+  // name         has_arg             flag  val
+    {"filename",  required_argument,  0,    'f'},
+    {"help",      no_argument,        0,    'h'},
+    {"listname",  required_argument,  0,    'l'},
+    {"version",   no_argument,        0,    'V'},
     {0}
   };
 
   while (1) {
 
-    int opt = getopt_long(argc, argv, "hV", longopts, &option_index);
+    int opt = getopt_long(argc, argv, "f:hl:V", longopts, &option_index);
 
     if (opt == -1) break;
 
     switch (opt) {
     /*
     case 0:
-      if (longopts[option_index].flag) break;
+      if (longopts[option_index].flag) 
+        break;
       break;
     */
 
-    case 'h':
+    case 'f': // filename
+      filename = strdup(optarg);
+      break;
+
+    case 'h': // help
       printf(HELP, argv[0], argv[0]);
       exit(EXIT_SUCCESS);
 
-    case 'V':
+    case 'l': // listname
+      listname = strdup(optarg);
+      break;
+
+    case 'V': // version
       printf("%s", VERSION);
       exit(EXIT_SUCCESS);
 
@@ -99,13 +116,13 @@ main(int argc, char **argv)
 #define is_arg(x) (strcmp(argv[optind], (x)) == 0)
 
   if (optind == argc || is_arg("view"))
-    view();
+    view(listname, filename);
 
   // else if (is_arg("create"))
     // createList();
 
   else if (is_arg("dump"))
-    dumpTasks();
+    dumpTasks(listname, filename);
 
   else if (is_arg("help")) {
     printf(HELP, argv[0], argv[0]);

@@ -28,8 +28,6 @@
 #include "error-codes.h"
 #include "error-functions.h" // errExit
 
-// TODO: parameterize readTasks (filename)
-
 #ifdef TESTING
 #define sqlErr(fmt, ...) return -1;
 #else
@@ -40,11 +38,10 @@
 #endif
 
 #define MAX_SQL_LEN 2048
-#define FILENAME "test/data/test-db.sqlite3"
 
 // TODO: check that parent_id / category combinations are valid
 int
-readTasks(list_T list)
+readTasks(list_T list, char *filename)
 {
   if (!list) return TD_INVALIDARG;
 
@@ -57,7 +54,7 @@ readTasks(list_T list)
   snprintf(sql, MAX_SQL_LEN, "select * from %s", listName(list));
 
   rc = sqlite3_open_v2(
-    FILENAME,              // filename
+    filename,              // filename
     &db,                   // db handle
     SQLITE_OPEN_READWRITE, // don't create if database doesn't exist
     NULL                   // OS interface for db connection
@@ -109,7 +106,7 @@ readTasks(list_T list)
 }
 
 static void
-updateTask(list_T list, task_T task)
+updateTask(list_T list, task_T task, char *filename)
 {
   sqlite3 *db;
   sqlite3_stmt *stmt;
@@ -135,7 +132,7 @@ updateTask(list_T list, task_T task)
     listName(list));
 
   rc = sqlite3_open_v2(
-    FILENAME,              // filename
+    filename,              // filename
     &db,                   // db handle
     SQLITE_OPEN_READWRITE, // don't create if database doesn't exist
     NULL                   // OS interface for db connection
@@ -174,7 +171,7 @@ updateTask(list_T list, task_T task)
 }
 
 static void
-writeNewTask(list_T list, task_T task)
+writeNewTask(list_T list, task_T task, char *filename)
 {
   sqlite3 *db;
   sqlite3_stmt *stmt;
@@ -192,7 +189,7 @@ writeNewTask(list_T list, task_T task)
     listName(list));
 
   rc = sqlite3_open_v2(
-    FILENAME,              // filename
+    filename,              // filename
     &db,                   // db handle
     SQLITE_OPEN_READWRITE, // don't create if database doesn't exist
     NULL                   // OS interface for db connection
@@ -231,7 +228,7 @@ writeNewTask(list_T list, task_T task)
 }
 
 int
-writeUpdates(list_T list)
+writeUpdates(list_T list, char *filename)
 {
   task_T *updates = listGetUpdates(list);
 
@@ -241,8 +238,8 @@ writeUpdates(list_T list)
   // TODO: if there is an error, this will do a partial write.
   // See if we can rollback if there's an error.
   for (int i=0; updates[i]; i++) {
-    if (taskGetFlag(updates[i], TF_NEW)) writeNewTask(list, updates[i]);
-    else updateTask(list, updates[i]);
+    if (taskGetFlag(updates[i], TF_NEW)) writeNewTask(list, updates[i], filename);
+    else updateTask(list, updates[i], filename);
   }
 
   free(updates);
@@ -252,15 +249,26 @@ writeUpdates(list_T list)
 }
 
 int
-dumpTasks()
+dumpTasks(char *listname, char *filename)
 {
-  char command[] = "sqlite3 -header test/data/test-db.sqlite3 'select * from default_list'";
+  char command[MAX_SQL_LEN];
+
+  // TODO: protect against SQL injection here
+  int size = snprintf(command, MAX_SQL_LEN, "sqlite3 -header %s 'select * from %s'",
+    filename, listname);
+
+  if (size >= MAX_SQL_LEN)
+    errExit("Failed to dump tasks: command is longer than buffer");
 
   int status = system(command);
-  if (status == -1) {
-    errExit("system");
-  }
-  // TODO: finish error checking system here
+  if (status == -1)
+    sysErrExit("Failed to dump tasks: sqlite3 process could not be created");
+
+  else if (WIFEXITED(status) && WEXITSTATUS(status) == 127)
+    errExit("Failed to dump tasks: Editor returned 127, likely unable to invoke shell");
+
+  else if (WEXITSTATUS(status) > 128)
+    errExit("Failed to dump tasks: sqlite3 returned an error");
 
   return TD_OK;
 }

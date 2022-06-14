@@ -100,13 +100,13 @@ crc32(uint32_t crc, const char *buf, size_t len)
  * to release the resources fail.
  */
 static uint32_t
-genCRC32(const char *pathname)
+genCRC32(const char *filename)
 {
   int fd;
   struct stat statbuf;
   char *buf;
 
-  if ((fd = open(pathname, O_RDONLY)) == -1) return 0;
+  if ((fd = open(filename, O_RDONLY)) == -1) return 0;
   
   if (fstat(fd, &statbuf) == -1) return 0;
 
@@ -128,7 +128,7 @@ genCRC32(const char *pathname)
 
 // TODO: need version when not in view (curses) mode
 static int
-editTmpFile(const char *pathname)
+editTmpFile(const char *filename)
 {
   char *editor = getenv("EDITOR");
   if (editor == NULL)
@@ -136,25 +136,28 @@ editTmpFile(const char *pathname)
 
 #define MAX_CMD_LEN 256
   char command[MAX_CMD_LEN];
-  int n = snprintf(command, MAX_CMD_LEN-1, "%s %s", editor, pathname);
+  int n = snprintf(command, MAX_CMD_LEN-1, "%s %s", editor, filename);
 
-  uint32_t hash_before = genCRC32(pathname);
+  uint32_t hash_before = genCRC32(filename);
 
   if (def_prog_mode() == ERR)
     errExit("Failed to open editor: terminal process not created"); 
+
   endwin();
 
   int status = system(command);
-  if (status == -1) {
+  if (status == -1)
     sysErrExit("Failed to open editor: editor process could not be created");
-  } else {
-    if (WIFEXITED(status) && WEXITSTATUS(status) == 127)
+
+  else if (WIFEXITED(status) && WEXITSTATUS(status) == 127)
       errExit("Editor returned 127, likely unable to invoke shell");
-  }
+  // We don't know which pager is used so we dont' check the exit
+  // code of the pager command, which would be 128+n where n
+  // is the exit code of the pager
 
   refresh(); // restore save modes, repaint screen
 
-  uint32_t hash_after = genCRC32(pathname);
+  uint32_t hash_after = genCRC32(filename);
 
   return (!hash_before || hash_before != hash_after) ? ET_MOD : ET_UNMOD;
 
@@ -178,9 +181,9 @@ trim(char **buf, ssize_t *len)
 }
 
 static void
-parseEditedFile(const char *pathname, task_T task)
+parseEditedFile(const char *filename, task_T task)
 {
-  FILE *file = fopen(pathname, "r");
+  FILE *file = fopen(filename, "r");
   if (!file) 
     sysErrExit("Failed to parse edited file: unable to open temp file");
 
@@ -293,22 +296,22 @@ editTask(list_T list, task_T task)
 
   taskSetFlag(edit, TF_UPDATE);
 
-  char pathname[] = "/tmp/task-XXXXXX";
-  writeTaskToTmpFile(pathname, task);
+  char filename[] = "/tmp/task-XXXXXX";
+  writeTaskToTmpFile(filename, task);
 
-  int rc = editTmpFile(pathname);
+  int rc = editTmpFile(filename);
 
   // If the first hash is zero or the hashes are different
   // then the file has been edited.
   if (rc == ET_UNMOD) {
     taskFree(&edit);
-    unlink(pathname);
+    unlink(filename);
     return ET_UNMOD;
   }
 
-  parseEditedFile(pathname, edit);
+  parseEditedFile(filename, edit);
 
-  unlink(pathname);
+  unlink(filename);
 
   validateEditedTask(list, edit);
 

@@ -23,6 +23,6 @@
 #ifndef TD_VIEW_INCLUDED
 #define TD_VIEW_INCLUDED
 
-extern void view();
+extern void view(char *listname, char *filename);
 
 #endif // TD_VIEW_INCLUDED
