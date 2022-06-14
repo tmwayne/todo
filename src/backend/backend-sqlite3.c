@@ -20,7 +20,7 @@
 
 #include <stdio.h>           // fprintf
 #include <stdlib.h>          // NULL
-#include <string.h>          // strlen, strcasecmp
+#include <string.h>          // strlen, strcasecmp, strncpy
 #include <stdbool.h>         // false
 #include <sqlite3.h>
 #include "task.h"
@@ -37,9 +37,11 @@
   } while (0);
 #endif
 
+// TODO: is there a non-arbitrary magic number we can use?
 #define MAX_SQL_LEN 2048
 
 // TODO: check that parent_id / category combinations are valid
+// TODO: abstract the query portions
 int
 readTasks(list_T list, char *filename)
 {
@@ -51,7 +53,10 @@ readTasks(list_T list, char *filename)
 
   // TODO: need to guard against SQL injection here
   char sql[MAX_SQL_LEN];
-  snprintf(sql, MAX_SQL_LEN, "select * from %s", listName(list));
+  int size = snprintf(sql, MAX_SQL_LEN, "select * from %s", listName(list));
+
+  if (size >= MAX_SQL_LEN)
+    errExit("Failed to read tasks: invalid list name");
 
   rc = sqlite3_open_v2(
     filename,              // filename
@@ -105,6 +110,60 @@ readTasks(list_T list, char *filename)
   return TD_OK;
 }
 
+/**
+ * This function constructs a query like the following but with
+ * a variable number of columns.
+ *
+ * "update table_name"
+ * "set parent_id = ?2, category = ?3, name = ?4, status = ?5"
+ * "where id = ?6"
+ */
+static int
+genUpdateSQL(const list_T list, const task_T task, char *buf, const size_t len)
+{
+  if (!(buf && len)) return TD_INVALIDARG;
+
+  elem_T elem;
+  char tmp[len];
+
+  // TODO: need to guard against SQL injection in the list name
+  char *text = "update %s set ";
+  snprintf(buf, len, text, listName(list));
+
+  // snprintf will ensure there is a null-terminating byte with this len
+  strncpy(tmp, buf, len);
+
+  //      buf (comma) key = ?X
+  text = "%s %s %s = ?%d";
+  char comma[2] = "";
+  char *key;
+
+  int i;
+  for (i=0; i < taskSize(task); i++) {
+  
+    elem = taskElemInd(task, i);
+    key = elemKey(taskElemInd(task, i));
+    if (strcmp(key, "id") == 0) continue;
+
+    snprintf(buf, len, text, tmp, comma, key, i+1);
+
+    strncpy(tmp, buf, len);
+    comma[0] = ',';
+
+  }
+
+  text = " %s where id = ?%d";
+
+  // Any of the above can cause an overflow, but
+  // because we concatenate the strings cumulatively,
+  // we only have to check the last one
+  if (snprintf(buf, len, text, tmp, i+1) >= len)
+    return TD_BUFOVERFLOW;
+
+  return TD_OK;
+  
+}
+
 static void
 updateTask(list_T list, task_T task, char *filename)
 {
@@ -115,21 +174,10 @@ updateTask(list_T list, task_T task, char *filename)
   if (!(list && task))
     errExit("Failed to write changes: null pointer passed as argument");
 
-  // TODO: need to guard against SQL injection here
-  // TODO: prepare this query dynamically
-  // TODO: add remaining columns
   char sql[MAX_SQL_LEN];
-  snprintf(sql, MAX_SQL_LEN,
-    "update %s            \
-    set                   \
-      parent_id   = ?2,   \
-      category    = ?3,   \
-      name        = ?4,   \
-      status      = ?5    \
-      effort      = ?6,   \
-      priority    = ?7,   \
-    where id = ?1", 
-    listName(list));
+
+  if (genUpdateSQL(list, task, sql, MAX_SQL_LEN) != TD_OK)
+    errExit("Failed to write changes: buffer overflow of update statement");
 
   rc = sqlite3_open_v2(
     filename,              // filename
@@ -139,7 +187,8 @@ updateTask(list_T list, task_T task, char *filename)
   );
 
   if (rc != SQLITE_OK)
-    sqlErr("Unable to open database: %s", sqlite3_errmsg(db));
+    sqlErr("Failed to write changes: unable to open database: %s",
+      sqlite3_errmsg(db));
 
   rc = sqlite3_prepare_v2(
     db,                    // db handle
@@ -150,25 +199,87 @@ updateTask(list_T list, task_T task, char *filename)
   );
 
   if (rc != SQLITE_OK) 
-    sqlErr("Unable to prepare SQL for update tasks: %s", sqlite3_errmsg(db));
+    sqlErr("Failed to write changes: unable to prepare SQL: %s",
+      sqlite3_errmsg(db));
 
-#define BIND_TEXT(ind, val) \
-  sqlite3_bind_text(stmt, (ind), (val), -1, SQLITE_STATIC);
+  int i;
+  elem_T elem;
+  for (i=0; i < taskSize(task); i++) {
+    elem = taskElemInd(task, i);
+    if (strcmp(elemKey(elem), "id") == 0) continue;
+    sqlite3_bind_text(stmt, i+1, elemVal(elem), -1, SQLITE_STATIC);
+  }
 
-  BIND_TEXT(1, taskGet(task, "id")); // should never be NULL
-  BIND_TEXT(2, taskGet(task, "parent_id"));
-  BIND_TEXT(3, taskGet(task, "category"));
-  BIND_TEXT(4, taskGet(task, "name"));
-  BIND_TEXT(5, taskGet(task, "status"));
-  BIND_TEXT(6, taskGet(task, "effort"));
-  BIND_TEXT(7, taskGet(task, "priority"));
+  sqlite3_bind_text(stmt, i+1, taskGet(task, "id"), -1, SQLITE_STATIC);
 
   if ((rc = sqlite3_step(stmt)) != SQLITE_DONE)
-    sqlErr("Failed to update database: %s", sqlite3_errmsg(db));
+    sqlErr("Failed to write changes: unable to update database: %s", 
+      sqlite3_errmsg(db));
 
   sqlite3_finalize(stmt);
   sqlite3_close(db);
 }
+
+/**
+ * This function constructs a query like the following but with
+ * a variable number of columns.
+ *
+ * "insert into %s (id, parent_id, category, name, status)"
+ * "values (?1, ?2, ?3, ?4, ?5)"
+ */
+static int
+genInsertSQL(const list_T list, const task_T task, char *buf, const size_t len)
+{
+  if (!(buf && len)) return TD_INVALIDARG;
+
+  elem_T elem;
+  char tmp[len];
+
+  // TODO: need to guard against SQL injection in the list name
+  char *text = "insert into %s (";
+  snprintf(buf, len, text, listName(list));
+
+  // snprintf will ensure there is a null-terminating byte with this len
+  strncpy(tmp, buf, len);
+
+  char comma[2] = "";
+  char *key;
+
+
+  // Construct this part: id, parent_id, category, name, status, ...
+  int i;
+  for (i=0; i < taskSize(task); i++) {
+  
+    key = elemKey(taskElemInd(task, i));
+    snprintf(buf, len, "%s%s%s", tmp, comma, key);
+
+    strncpy(tmp, buf, len);
+    comma[0] = ',';
+
+  }
+
+  text = "%s) values (";
+  snprintf(buf, len, text, tmp);
+  strncpy(tmp, buf, len);
+
+// Construct this part: ?1, ?2, ?3, ?4, ?5, ...
+  comma[0] = ' ';
+  for (int j=0; j<i; j++) {
+    snprintf(buf, len, "%s%s?%d", tmp, comma, j+1);
+    strncpy(tmp, buf, len);
+    comma[0] = ',';
+  }
+
+  // Any of the above can cause an overflow, but
+  // because we concatenate the strings cumulatively,
+  // we only have to check the last one
+  if (snprintf(buf, len, "%s)", tmp) >= len)
+    return TD_BUFOVERFLOW;
+
+  return TD_OK;
+  
+}
+
 
 static void
 writeNewTask(list_T list, task_T task, char *filename)
@@ -180,13 +291,10 @@ writeNewTask(list_T list, task_T task, char *filename)
   if (!(list && task))
     errExit("Failed to write changes: null pointer passed as argument");
 
-  // TODO: need to guard against SQL injection here
-  // TODO: prepare this query dynamically
   char sql[MAX_SQL_LEN];
-  snprintf(sql, MAX_SQL_LEN,
-    "insert into %s (id, parent_id, category, name, status, effort, priority) \
-    values (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-    listName(list));
+
+  if (genInsertSQL(list, task, sql, MAX_SQL_LEN) != TD_OK)
+    errExit("Failed to write changes: buffer overflow of insert statement");
 
   rc = sqlite3_open_v2(
     filename,              // filename
@@ -196,7 +304,8 @@ writeNewTask(list_T list, task_T task, char *filename)
   );
 
   if (rc != SQLITE_OK)
-    sqlErr("Unable to open database: %s", sqlite3_errmsg(db));
+    sqlErr("Failed to write changes: unable to open database: %s",
+      sqlite3_errmsg(db));
 
   rc = sqlite3_prepare_v2(
     db,                    // db handle
@@ -207,18 +316,11 @@ writeNewTask(list_T list, task_T task, char *filename)
   );
 
   if (rc != SQLITE_OK) 
-    sqlErr("Unable to prepare SQL for update tasks: %s", sqlite3_errmsg(db));
+    sqlErr("Failed to write changes: unable to prepare SQL: %s",
+      sqlite3_errmsg(db));
 
-#define BIND_TEXT(ind, val) \
-  sqlite3_bind_text(stmt, (ind), (val), -1, SQLITE_STATIC);
-
-  BIND_TEXT(1, taskGet(task, "id")); // should never be NULL
-  BIND_TEXT(2, taskGet(task, "parent_id"));
-  BIND_TEXT(3, taskGet(task, "category"));
-  BIND_TEXT(4, taskGet(task, "name"));
-  BIND_TEXT(5, taskGet(task, "status"));
-  BIND_TEXT(6, taskGet(task, "effort"));
-  BIND_TEXT(7, taskGet(task, "priority"));
+  for (int i=0; i < taskSize(task); i++)
+    sqlite3_bind_text(stmt, i+1, taskValInd(task, i), -1, SQLITE_STATIC);
 
   if ((rc = sqlite3_step(stmt)) != SQLITE_DONE)
     sqlErr("Failed to add task to database: %s", sqlite3_errmsg(db));
@@ -258,7 +360,7 @@ dumpTasks(char *listname, char *filename)
     filename, listname);
 
   if (size >= MAX_SQL_LEN)
-    errExit("Failed to dump tasks: command is longer than buffer");
+    errExit("Failed to dump tasks: invalid list or filename");
 
   int status = system(command);
   if (status == -1)

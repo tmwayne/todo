@@ -22,6 +22,7 @@
 #define ERROR_CODES_INCLUDED
 
 enum generalReturnCode {
+  TD_BUFOVERFLOW = -2,
   TD_INVALIDARG = -1, // one of the arguments is invalid
   TD_OK = 0
 };
