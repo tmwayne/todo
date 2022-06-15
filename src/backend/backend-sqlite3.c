@@ -40,10 +40,11 @@
 // TODO: is there a non-arbitrary magic number we can use?
 #define MAX_SQL_LEN 2048
 
-// TODO: check that parent_id / category combinations are valid
-// TODO: abstract the query portions
-int
-readTasks(list_T list, char *filename)
+static int
+runSQL(char *filename, list_T list, task_T task,
+  int genSQL(const list_T, const task_T, char *, const size_t),
+  int bindSQL(sqlite3_stmt *, sqlite3 *, const list_T, const task_T),
+  int processSQL(sqlite3_stmt *, sqlite3 *, list_T, task_T))
 {
   if (!list) return TD_INVALIDARG;
 
@@ -53,10 +54,9 @@ readTasks(list_T list, char *filename)
 
   // TODO: need to guard against SQL injection here
   char sql[MAX_SQL_LEN];
-  int size = snprintf(sql, MAX_SQL_LEN, "select * from %s", listName(list));
-
-  if (size >= MAX_SQL_LEN)
-    errExit("Failed to read tasks: invalid list name");
+  
+  if (genSQL(list, task, sql, MAX_SQL_LEN) != TD_OK)
+    return -1; // TODO: return error code
 
   rc = sqlite3_open_v2(
     filename,              // filename
@@ -79,6 +79,45 @@ readTasks(list_T list, char *filename)
   if (rc != SQLITE_OK) 
     sqlErr("Unable to prepare SQL for fetching tasks: %s", sqlite3_errmsg(db));
 
+  if (bindSQL)
+    if (bindSQL(stmt, db, list, task) != TD_OK)
+      return -1; // TODO: return error code
+
+  if (processSQL(stmt, db, list, task) != TD_OK)
+    return -1; // TODO: return error code
+
+  sqlite3_finalize(stmt);
+  sqlite3_close(db);
+
+  return TD_OK;
+}
+
+static int
+processNoResultSQL(sqlite3_stmt *stmt, sqlite3 *db, list_T list, task_T task)
+{
+  if (sqlite3_step(stmt) != SQLITE_DONE) return -1; // TODO: return error code
+  else return TD_OK;
+}
+
+// -----------------------------------------------------------------------------
+// Read
+// -----------------------------------------------------------------------------
+
+static int
+genReadSQL(const list_T list, const task_T task, char *buf, const size_t len)
+{
+  if (snprintf(buf, len, "select * from %s", listName(list)) >= len)
+    return TD_BUFOVERFLOW;
+
+  return TD_OK;
+}
+
+// TODO: check that parent_id / category combinations are valid
+// TODO: abstract the query portions
+static int
+processReadSQL(sqlite3_stmt *stmt, sqlite3 *db, list_T list, task_T task)
+{
+  int rc;
   int ncols = sqlite3_column_count(stmt);
 
   for (int i=0; i < ncols; i++)
@@ -103,12 +142,20 @@ readTasks(list_T list, char *filename)
       listSetTask(list, task);
 
   }
-
-  sqlite3_finalize(stmt);
-  sqlite3_close(db);
-
+  
   return TD_OK;
 }
+
+int
+readTasks(list_T list, char *filename)
+{
+  return runSQL(filename, list, NULL, 
+    genReadSQL, NULL, processReadSQL);
+}
+
+// -----------------------------------------------------------------------------
+// Update
+// -----------------------------------------------------------------------------
 
 /**
  * This function constructs a query like the following but with
@@ -164,44 +211,9 @@ genUpdateSQL(const list_T list, const task_T task, char *buf, const size_t len)
   
 }
 
-static void
-updateTask(list_T list, task_T task, char *filename)
+static int
+bindUpdateSQL(sqlite3_stmt *stmt, sqlite3 *db, const list_T list, const task_T task)
 {
-  sqlite3 *db;
-  sqlite3_stmt *stmt;
-  int rc;
-
-  if (!(list && task))
-    errExit("Failed to write changes: null pointer passed as argument");
-
-  char sql[MAX_SQL_LEN];
-
-  if (genUpdateSQL(list, task, sql, MAX_SQL_LEN) != TD_OK)
-    errExit("Failed to write changes: buffer overflow of update statement");
-
-  rc = sqlite3_open_v2(
-    filename,              // filename
-    &db,                   // db handle
-    SQLITE_OPEN_READWRITE, // don't create if database doesn't exist
-    NULL                   // OS interface for db connection
-  );
-
-  if (rc != SQLITE_OK)
-    sqlErr("Failed to write changes: unable to open database: %s",
-      sqlite3_errmsg(db));
-
-  rc = sqlite3_prepare_v2(
-    db,                    // db handle
-    sql,                   // sql statement
-    strlen(sql)+1,         // maximum length of sql, in bytes (including '\0')
-    &stmt,                 // out: statement handle
-    NULL                   // out: point to unused portion of sql
-  );
-
-  if (rc != SQLITE_OK) 
-    sqlErr("Failed to write changes: unable to prepare SQL: %s",
-      sqlite3_errmsg(db));
-
   int i;
   elem_T elem;
   for (i=0; i < taskSize(task); i++) {
@@ -212,13 +224,19 @@ updateTask(list_T list, task_T task, char *filename)
 
   sqlite3_bind_text(stmt, i+1, taskGet(task, "id"), -1, SQLITE_STATIC);
 
-  if ((rc = sqlite3_step(stmt)) != SQLITE_DONE)
-    sqlErr("Failed to write changes: unable to update database: %s", 
-      sqlite3_errmsg(db));
-
-  sqlite3_finalize(stmt);
-  sqlite3_close(db);
+  return TD_OK;
 }
+
+int
+updateTask(list_T list, task_T task, char *filename)
+{
+  return runSQL(filename, list, task, 
+    genUpdateSQL, bindUpdateSQL, processNoResultSQL);
+}
+
+// -----------------------------------------------------------------------------
+// Insert
+// -----------------------------------------------------------------------------
 
 /**
  * This function constructs a query like the following but with
@@ -280,53 +298,20 @@ genInsertSQL(const list_T list, const task_T task, char *buf, const size_t len)
   
 }
 
-
-static void
-writeNewTask(list_T list, task_T task, char *filename)
+static int
+bindInsertSQL(sqlite3_stmt *stmt, sqlite3 *db, const list_T list, const task_T task)
 {
-  sqlite3 *db;
-  sqlite3_stmt *stmt;
-  int rc;
-
-  if (!(list && task))
-    errExit("Failed to write changes: null pointer passed as argument");
-
-  char sql[MAX_SQL_LEN];
-
-  if (genInsertSQL(list, task, sql, MAX_SQL_LEN) != TD_OK)
-    errExit("Failed to write changes: buffer overflow of insert statement");
-
-  rc = sqlite3_open_v2(
-    filename,              // filename
-    &db,                   // db handle
-    SQLITE_OPEN_READWRITE, // don't create if database doesn't exist
-    NULL                   // OS interface for db connection
-  );
-
-  if (rc != SQLITE_OK)
-    sqlErr("Failed to write changes: unable to open database: %s",
-      sqlite3_errmsg(db));
-
-  rc = sqlite3_prepare_v2(
-    db,                    // db handle
-    sql,                   // sql statement
-    strlen(sql)+1,         // maximum length of sql, in bytes (including '\0')
-    &stmt,                 // out: statement handle
-    NULL                   // out: point to unused portion of sql
-  );
-
-  if (rc != SQLITE_OK) 
-    sqlErr("Failed to write changes: unable to prepare SQL: %s",
-      sqlite3_errmsg(db));
-
   for (int i=0; i < taskSize(task); i++)
     sqlite3_bind_text(stmt, i+1, taskValInd(task, i), -1, SQLITE_STATIC);
 
-  if ((rc = sqlite3_step(stmt)) != SQLITE_DONE)
-    sqlErr("Failed to add task to database: %s", sqlite3_errmsg(db));
+  return TD_OK;
+}
 
-  sqlite3_finalize(stmt);
-  sqlite3_close(db);
+int
+writeNewTask(list_T list, task_T task, char *filename)
+{
+  return runSQL(filename, list, task, 
+    genInsertSQL, bindInsertSQL, processNoResultSQL);
 }
 
 int
@@ -349,6 +334,10 @@ writeUpdates(list_T list, char *filename)
 
   return TD_OK;
 }
+
+// -----------------------------------------------------------------------------
+// Dump
+// -----------------------------------------------------------------------------
 
 int
 dumpTasks(char *listname, char *filename)
