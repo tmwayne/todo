@@ -37,6 +37,8 @@ Licensed under the Apache License, Version 2.0  \n\
 Written by Tyler Wayne.                         \n\
 ";
 
+// TODO: have action specific flags
+
 const char *HELP = "\
 Usage: %s [OPTIONS...] COMMAND                              \n\
 Manage todo lists                                           \n\
@@ -45,11 +47,13 @@ Options:                                                    \n\
   -f, --filename=NAME       Load todo list from NAME        \n\
   -h, --help                Print this help                 \n\
   -l, --listname=NAME       Load todo list NAME             \n\
+  -s, --sep=SEP             Import using SEP as separator   \n\
   -v, --version             Print version info              \n\
                                                             \n\
 Commands:                                                   \n\
   create    Create a new todo list                          \n\
   dump      Dump todo list to stdout in tabular form        \n\
+  import    Import tasks from delimited file                \n\
   view      View todo lists and make edits. (default)       \n\
                                                             \n\
 Run '%s COMMAND --help' for more information on a command.  \n\
@@ -59,8 +63,9 @@ int
 main(int argc, char **argv)
 {
 
-  char *filename = "test/data/test-db.sqlite3";
-  char *listname = "default_list";
+  char *filename  = "test/data/test-db.sqlite3";
+  char *listname  = "default_list";
+  char  sep       = ',';
 
   int option_index = 0;
   struct option longopts[] = {
@@ -68,6 +73,7 @@ main(int argc, char **argv)
     {"filename",  required_argument,  0,    'f'},
     {"help",      no_argument,        0,    'h'},
     {"listname",  required_argument,  0,    'l'},
+    {"sep",       required_argument,  0,    's'},
     {"version",   no_argument,        0,    'V'},
     {0}
   };
@@ -98,6 +104,10 @@ main(int argc, char **argv)
       listname = strdup(optarg);
       break;
 
+    case 's': // sep
+      sep = *optarg;
+      break;
+
     case 'V': // version
       printf("%s", VERSION);
       exit(EXIT_SUCCESS);
@@ -123,6 +133,13 @@ main(int argc, char **argv)
 
   else if (is_arg("dump"))
     dumpTasks(listname, filename);
+
+  else if (is_arg("import")) {
+    optind++;
+    if (optind == argc)
+      usageErr("Import requires a file\n");
+    printf("Separator is %c for file %s\n", sep, argv[optind]);
+  }
 
   else if (is_arg("help")) {
     printf(HELP, argv[0], argv[0]);
