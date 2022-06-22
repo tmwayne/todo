@@ -1,1 +1,1 @@
-SUBDIRS = common backend todo
+SUBDIRS = common backend delim-reader todo

@@ -18,18 +18,35 @@
 // limitations under the License.
 //
 
-#ifndef ERROR_CODES_INCLUDED
-#define ERROR_CODES_INCLUDED
+#ifndef ERRORCODES_INCLUDED
+#define ERRORCODES_INCLUDED
 
-enum generalReturnCode {
-  TD_BUFOVERFLOW = -2,
-  TD_INVALIDARG = -1, // one of the arguments is invalid
-  TD_OK = 0
+// TODO: rename this file return-codes.h
+
+enum generalRCs {
+  TD_BUFOVERFLOW  = -2,
+  TD_INVALIDARG   = -1, // one of the arguments is invalid
+  TD_OK           = 0
 };
 
-enum editReturnCodes {
-  ET_UNMOD = 0,       // task wasn't modified
-  ET_MOD = 1          // task was modified
+enum editRCs {
+  ET_UNMOD        = 0,  // task wasn't modified
+  ET_MOD          = 1   // task was modified
 };
 
-#endif // ERROR_CODES_INCLUDED
+enum readerRCs {
+  RD_ESYNTAX      = -2, // syntax error
+  RD_ENOMEM       = -1  // memory allocation failed
+};
+
+enum dataframeRCs {
+  DF_INVRECORD    = -5, // record has the wrong number of rows
+  DF_CORRUPT      = -4, // values in the dataframe are inconsistent
+  DF_ENOMEM       = -3, // memory allocation failed
+  DF_OOBARG       = -2, // argument is out-of-bounds
+  DF_NULLARG      = -1, // pointer argument is NULL
+  DF_OK           = 0
+};
+
+
+#endif // ERRORCODES_INCLUDED
