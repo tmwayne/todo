@@ -71,18 +71,16 @@ catGetTask(const cat_T cat, task_T task)
   return NULL;
 }
 
-static int
+static void
 catFreeTasks(task_T *task)
 {
-  if (!(*task)) return TD_OK;
+  if (!(task && *task)) return;
 
   catFreeTasks(&(*task)->rlink);
   catFreeTasks(&(*task)->child);
 
   taskFree(task);
   *task = NULL;
-
-  return TD_OK;
 }
 
 /**

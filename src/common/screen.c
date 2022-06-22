@@ -137,9 +137,11 @@ screenGetFirstLine(const screen_T screen)
   else return screen->lines;
 }
 
-int
+void
 screenFree(screen_T *screen)
 {
+  if (!(screen && *screen)) return;
+
   line_T line, next;
   for (line=(*screen)->lines; line; ) {
     next = line->rlink;
@@ -149,8 +151,6 @@ screenFree(screen_T *screen)
 
   free(*screen);
   *screen = NULL;
-
-  return TD_OK;
 }
 
 // -----------------------------------------------------------------------------

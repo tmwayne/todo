@@ -162,7 +162,8 @@ taskFree(task_T *task)
     memFree(elem->val);
     memFree(elem);
   }
-  memFree(*task);
+  free(*task);
+  *task = NULL;
 }
 
 task_T
