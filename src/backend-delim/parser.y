@@ -40,14 +40,12 @@ char *val;
 // %locations
 
 %code requires {
-  // typedef void *yyscan_t;
   typedef struct dataframe *dataframe_T;
   typedef struct scannerArgs scanner_T;
 }
 
 %parse-param{ dataframe_T data }
 %param{ scanner_T scanner }
-// %param { yyscan_t scanner }
 
 %union {
   char *str;

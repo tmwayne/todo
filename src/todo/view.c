@@ -29,6 +29,7 @@
 #include "task.h"            // task_T
 #include "edit.h"            // editTask
 #include "backend-sqlite3.h" // readTasks
+#include "backend-delim.h"   // readTasks_delim
 #include "error-codes.h"     // TD_OK
 #include "view.h"
 #include "screen.h"
@@ -230,6 +231,7 @@ eventLoop(char *listname, char *filename)
   task_T task;
 
   readTasks(list, filename);
+  // readTasks_delim(list, filename);
   screenInitialize(screen, list);
 
   viewListScreen(screen, list);

@@ -1,6 +1,6 @@
 // 
 // -----------------------------------------------------------------------------
-// backend-sqlite3.h
+// backend-delim.h
 // -----------------------------------------------------------------------------
 //
 // Copyright (c) 2022 Tyler Wayne
@@ -18,14 +18,12 @@
 // limitations under the License.
 //
 
-#ifndef BACKEND_SQLITE3_INCLUDED
-#define BACKEND_SQLITE3_INCLUDED
+#ifndef BACKEND_DELIM_INCLUDED
+#define BACKEND_DELIM_INCLUDED
 
 #include "task.h" // task_T
 #include "list.h" // list_T
 
-extern int readTasks(list_T, const char *filename);
-extern int writeUpdates(list_T, const char *filename);
-extern int dumpTasks(char *listname, const char *filename);
+extern void readTasks_delim(list_T, const char *filename);
 
-#endif // BACKEND_SQLITE3_INCLUDED
+#endif // BACKEND_DELIM_INCLUDED

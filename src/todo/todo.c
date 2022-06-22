@@ -80,7 +80,7 @@ main(int argc, char **argv)
 
   while (1) {
 
-    int opt = getopt_long(argc, argv, "f:hl:V", longopts, &option_index);
+    int opt = getopt_long(argc, argv, "f:hl:s:V", longopts, &option_index);
 
     if (opt == -1) break;
 

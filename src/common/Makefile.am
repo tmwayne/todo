@@ -1,5 +1,6 @@
 noinst_LTLIBRARIES = libcommon.la
-libcommon_la_SOURCES = error-functions.c \
+libcommon_la_SOURCES = dataframe.c \
+	error-functions.c \
 	list.c \
 	mem.c \
 	screen.c \

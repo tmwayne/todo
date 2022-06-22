@@ -41,8 +41,8 @@ AC_CONFIG_FILES([
   include/Makefile
   src/Makefile
   src/common/Makefile
-  src/backend/Makefile
-  src/delim-reader/Makefile
+  src/backend-sqlite3/Makefile
+  src/backend-delim/Makefile
   src/todo/Makefile
   test/Makefile
   test/unit/Makefile])

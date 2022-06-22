@@ -34,7 +34,7 @@ yylex(YYSTYPE *yylvalp, struct scannerArgs yyscanner)
   char *buf = calloc(len, sizeof(char));
   if (!buf) return RD_ENOMEM;
 
-  while ((c = getc(stdin)) != EOF) {
+  while ((c = getc(yyscanner.yyin)) != EOF) {
 
     // Separator or new-line
     if (c == yyscanner.sep || c == '\n') {

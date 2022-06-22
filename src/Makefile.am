@@ -1,1 +1,1 @@
-SUBDIRS = common backend delim-reader todo
+SUBDIRS = common backend-sqlite3 backend-delim todo

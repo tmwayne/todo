@@ -41,7 +41,7 @@
 #define MAX_SQL_LEN 2048
 
 static int
-runSQL(char *filename, list_T list, task_T task,
+runSQL(const char *filename, list_T list, task_T task,
   int genSQL(const list_T, const task_T, char *, const size_t),
   int bindSQL(sqlite3_stmt *, sqlite3 *, const list_T, const task_T),
   int processSQL(sqlite3_stmt *, sqlite3 *, list_T, task_T))
@@ -147,7 +147,7 @@ processReadSQL(sqlite3_stmt *stmt, sqlite3 *db, list_T list, task_T task)
 }
 
 int
-readTasks(list_T list, char *filename)
+readTasks(list_T list, const char *filename)
 {
   return runSQL(filename, list, NULL, 
     genReadSQL, NULL, processReadSQL);
@@ -228,7 +228,7 @@ bindUpdateSQL(sqlite3_stmt *stmt, sqlite3 *db, const list_T list, const task_T t
 }
 
 int
-updateTask(list_T list, task_T task, char *filename)
+updateTask(list_T list, task_T task, const char *filename)
 {
   return runSQL(filename, list, task, 
     genUpdateSQL, bindUpdateSQL, processNoResultSQL);
@@ -308,14 +308,14 @@ bindInsertSQL(sqlite3_stmt *stmt, sqlite3 *db, const list_T list, const task_T t
 }
 
 int
-writeNewTask(list_T list, task_T task, char *filename)
+writeNewTask(list_T list, task_T task, const char *filename)
 {
   return runSQL(filename, list, task, 
     genInsertSQL, bindInsertSQL, processNoResultSQL);
 }
 
 int
-writeUpdates(list_T list, char *filename)
+writeUpdates(list_T list, const char *filename)
 {
   task_T *updates = listGetUpdates(list);
 
@@ -340,7 +340,7 @@ writeUpdates(list_T list, char *filename)
 // -----------------------------------------------------------------------------
 
 int
-dumpTasks(char *listname, char *filename)
+dumpTasks(char *listname, const char *filename)
 {
   char command[MAX_SQL_LEN];
 
