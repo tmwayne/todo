@@ -335,31 +335,3 @@ writeUpdates(list_T list, const char *filename)
   return TD_OK;
 }
 
-// -----------------------------------------------------------------------------
-// Dump
-// -----------------------------------------------------------------------------
-
-int
-dumpTasks(char *listname, const char *filename)
-{
-  char command[MAX_SQL_LEN];
-
-  // TODO: protect against SQL injection here
-  int size = snprintf(command, MAX_SQL_LEN, "sqlite3 -header %s 'select * from %s'",
-    filename, listname);
-
-  if (size >= MAX_SQL_LEN)
-    errExit("Failed to dump tasks: invalid list or filename");
-
-  int status = system(command);
-  if (status == -1)
-    sysErrExit("Failed to dump tasks: sqlite3 process could not be created");
-
-  else if (WIFEXITED(status) && WEXITSTATUS(status) == 127)
-    errExit("Failed to dump tasks: Editor returned 127, likely unable to invoke shell");
-
-  else if (WEXITSTATUS(status) > 128)
-    errExit("Failed to dump tasks: sqlite3 returned an error");
-
-  return TD_OK;
-}

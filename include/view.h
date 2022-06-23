@@ -23,6 +23,8 @@
 #ifndef TD_VIEW_INCLUDED
 #define TD_VIEW_INCLUDED
 
-extern void view(char *listname, char *filename);
+#include "list.h"
+
+extern void view(list_T, const char *filename);
 
 #endif // TD_VIEW_INCLUDED

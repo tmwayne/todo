@@ -1,6 +1,6 @@
-// 
+//
 // -----------------------------------------------------------------------------
-// backend-sqlite3.h
+// dump.h
 // -----------------------------------------------------------------------------
 //
 // Copyright (c) 2022 Tyler Wayne
@@ -18,13 +18,9 @@
 // limitations under the License.
 //
 
-#ifndef BACKEND_SQLITE3_INCLUDED
-#define BACKEND_SQLITE3_INCLUDED
+#ifndef DUMP_INCLUDED
+#define DUMP_INCLUDED
 
-#include "task.h" // task_T
-#include "list.h" // list_T
+extern void dumpTasks(char *listname, const char *filename);
 
-extern int readTasks(list_T, const char *filename);
-extern int writeUpdates(list_T, const char *filename);
-
-#endif // BACKEND_SQLITE3_INCLUDED
+#endif // DUMP_INCLUDED

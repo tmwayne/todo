@@ -1,5 +1,7 @@
 bin_PROGRAMS = todo
-todo_SOURCES = edit.c \
+todo_SOURCES = dump.c \
+	edit.c \
+	import.c \
 	todo.c \
 	view.c
 todo_CPPFLAGS = -I$(top_srcdir)/include

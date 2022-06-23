@@ -1,6 +1,6 @@
 // 
 // -----------------------------------------------------------------------------
-// backend-sqlite3.h
+// import.h
 // -----------------------------------------------------------------------------
 //
 // Copyright (c) 2022 Tyler Wayne
@@ -18,13 +18,11 @@
 // limitations under the License.
 //
 
-#ifndef BACKEND_SQLITE3_INCLUDED
-#define BACKEND_SQLITE3_INCLUDED
+#ifndef IMPORT_INCLUDED
+#define IMPORT_INCLUDED
 
-#include "task.h" // task_T
 #include "list.h" // list_T
 
-extern int readTasks(list_T, const char *filename);
-extern int writeUpdates(list_T, const char *filename);
+extern void importTasks(list_T, char **filename, const char *import_filename);
 
-#endif // BACKEND_SQLITE3_INCLUDED
+#endif // IMPORT_INCLUDED

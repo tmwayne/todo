@@ -224,14 +224,15 @@ moveUp(const screen_T screen, line_T *line)
 
 
 static void 
-eventLoop(char *listname, char *filename)
+eventLoop(list_T list, const char *filename)
 {
+  // TODO: prompt to create list if filename is NULL
+  if (!filename) return;
+
   screen_T screen = screenNew();
-  list_T list = listNew(listname);
   task_T task;
 
   readTasks(list, filename);
-  // readTasks_delim(list, filename);
   screenInitialize(screen, list);
 
   viewListScreen(screen, list);
@@ -375,8 +376,10 @@ endwinAtExit()
 }
 
 void
-view(char *listname, char *filename)
+view(list_T list, const char *filename)
 {
+  if (!(list && filename)) return;
+  
   // Register this exit handler so that we can exit
   // the program within functions when errors occur
   atexit(endwinAtExit);
@@ -385,6 +388,6 @@ view(char *listname, char *filename)
   cbreak();
   noecho();
 
-  eventLoop(listname, filename);
+  eventLoop(list, filename);
 }
 

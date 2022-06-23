@@ -25,7 +25,8 @@
 #include "error-functions.h" // usageErr
 #include "task.h"            // task_T
 #include "view.h"            // view
-#include "backend-sqlite3.h" // dumpTasks
+#include "import.h"          // import
+#include "dump.h"            // dumpTasks
 
 const char *USAGE = "Usage: %s [OPTIONS...] COMMAND\n";
 
@@ -63,7 +64,8 @@ int
 main(int argc, char **argv)
 {
 
-  char *filename  = "test/data/test-db.sqlite3";
+  // char *filename  = "test/data/test-db.sqlite3";
+  char *filename  = NULL;
   char *listname  = "default_list";
   char  sep       = ',';
 
@@ -125,8 +127,10 @@ main(int argc, char **argv)
 
 #define is_arg(x) (strcmp(argv[optind], (x)) == 0)
 
+  list_T list = listNew(listname);
+
   if (optind == argc || is_arg("view"))
-    view(listname, filename);
+    view(list, filename);
 
   // else if (is_arg("create"))
     // createList();
@@ -136,9 +140,10 @@ main(int argc, char **argv)
 
   else if (is_arg("import")) {
     optind++;
-    if (optind == argc)
-      usageErr("Import requires a file\n");
-    printf("Separator is %c for file %s\n", sep, argv[optind]);
+    char *import_filename = optind < argc ? argv[optind] : NULL;
+    importTasks(list, &filename, import_filename);
+    // view(list, filename);
+    printf("filename: %s\n", filename);
   }
 
   else if (is_arg("help")) {

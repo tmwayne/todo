@@ -27,10 +27,11 @@
 #include "error-codes.h"
 #include "error-functions.h" // errExit
 
+// TODO: read list keys from headers
 void
 readTasks_delim(list_T list, const char *filename)
 {
-  FILE *file = fopen(filename, "r");
+  FILE *file = filename ? fopen(filename, "r") : stdin;
   if (!file)
     sysErrExit("Failed to open delimited data");
 
