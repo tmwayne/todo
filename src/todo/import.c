@@ -19,6 +19,7 @@
 //
 
 #include <stdio.h>             // printf
+#include <stdlib.h>            // free
 #include <readline/readline.h> // readline
 #include "error-functions.h"   // errExit
 #include "list.h"              // list_T

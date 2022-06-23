@@ -45,6 +45,9 @@ readTasks_delim(list_T list, const char *filename)
   if (!data)
     errExit("Failed to parse delimited data");
 
+  for (int i=0; i < data->nfields; i++)
+    listAddKey(list, data->headers->fields[i]);
+
   for (int i=0; i < data->nrecords; i++) {
     task_T task = taskNew();
     if (!task)
