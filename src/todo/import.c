@@ -18,15 +18,12 @@
 // limitations under the License.
 //
 
-#include <stdio.h>           // printf, getchar, fgets
-#include <stdlib.h>          // calloc
-#include <limits.h>          // PATH_MAX
-#include <string.h>          // strlen
-#include "error-functions.h" // errExit
-#include "list.h"            // list_T
-#include "backend-delim.h"   // readTasks_delim
+#include <stdio.h>             // printf
+#include <readline/readline.h> // readline
+#include "error-functions.h"   // errExit
+#include "list.h"              // list_T
+#include "backend-delim.h"     // readTasks_delim
 
-// TODO: there are issues here reading in the input
 void
 importTasks(list_T list, char **filename, char *import_filename)
 {
@@ -38,28 +35,14 @@ importTasks(list_T list, char **filename, char *import_filename)
   readTasks_delim(list, import_filename);
 
   if (!(*filename)) {
-    printf("Backend file doesn't exist. Create one? (y/n) ");
-    // add 2 to PATH_MAX for potential newline and null-terminator
-    char *input;
-    size_t n;
-    ssize_t nread;
-    nread = getline(&input, &n, stdin);
-    if (nread == -1)
-      sysErrExit("Failed to read answer");
-    char answer = input[0];
-    // TODO: free the input
-    // free(input);
-    input = NULL;
+    char *line = readline("Backend file doesn't exist. Create one? (y/n) ");
 
-    switch (answer) {
+    switch (line[0]) {
     case 'y':
-      printf("File name: ");
-      nread = getline(filename, &n, stdin);
-      if (nread == -1)
-        sysErrExit("Failed to read filename");
+      *filename = readline("File name: ");
 
-      if ((*filename)[strlen(*filename)-1] == '\n')
-        (*filename)[strlen(*filename)-1] = '\0';
+    default:
+      free(line);
       break;
     }
   }

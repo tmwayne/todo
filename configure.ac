@@ -26,6 +26,7 @@ AC_SEARCH_LIBS([dlopen], [dl])
 AC_SEARCH_LIBS([initscr], [cursesw curses])
 AC_SEARCH_LIBS([stdscr], [cursesw curses term])
 AC_SEARCH_LIBS([sqlite3_open_v2], [sqlite3])
+AC_SEARCH_LIBS([readline], [readline])
 
 # Checks for header files.
 AC_CHECK_HEADERS([])
