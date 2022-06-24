@@ -21,8 +21,8 @@
 drop table if exists default_list;
 
 create table default_list (
-    id char primary key,
-    parent_id char,
+    id text primary key,
+    parent_id text,
     category text,
     name text not null,
     effort text,

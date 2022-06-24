@@ -27,6 +27,7 @@
 #include "view.h"            // view
 #include "import.h"          // import
 #include "dump.h"            // dumpTasks
+#include "backend-sqlite3.h" // createBackend
 
 const char *USAGE = "Usage: %s [OPTIONS...] COMMAND\n";
 
@@ -142,8 +143,9 @@ main(int argc, char **argv)
     optind++;
     char *import_filename = optind < argc ? argv[optind] : NULL;
     importTasks(list, &filename, import_filename);
-    // view(list, filename);
-    printf("filename: %s\n", filename);
+    if (filename) createBackend(list, filename);
+    view(list, filename);
+    // printf("filename: %s\n", filename);
   }
 
   else if (is_arg("help")) {

@@ -27,7 +27,6 @@
 #include "return-codes.h"
 #include "error-functions.h" // errExit
 
-// TODO: read list keys from headers
 void
 readTasks_delim(list_T list, const char *filename)
 {
@@ -58,6 +57,11 @@ readTasks_delim(list_T list, const char *filename)
 
     if (taskCheckKeys(task) != TD_OK) 
       errExit("Task doesn't have all required keys");
+
+    taskSetFlag(task, TF_NEW|TF_UPDATE);
+
+    // TODO: remove this dependency on knowing the internal structure of list
+    list->nupdates++;
 
     if (strcasecmp(taskGet(task, "status"), "Complete") != 0)
       listSetTask(list, task);

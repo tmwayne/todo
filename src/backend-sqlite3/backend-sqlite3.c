@@ -335,3 +335,71 @@ writeUpdates(list_T list, const char *filename)
   return TD_OK;
 }
 
+
+// -----------------------------------------------------------------------------
+// Create
+// -----------------------------------------------------------------------------
+
+static int 
+genCreateSQL(const list_T list, const task_T unused, char *buf, const size_t len)
+{
+  if (!(buf && len)) return TD_INVALIDARG;
+
+  elem_T elem;
+  char tmp[len];
+
+  // TODO: guard against SQL injection in the list name
+  char *text ="create table %s (";
+  // snprintf will ensure there is a null-terminating byte with this len
+  snprintf(buf, len, text, listName(list));
+  strncpy(tmp, buf, len);
+
+  // format: "tmp (comma) col (extra-args)"
+  text = "%s %s %s text %s";
+  char *extra_args;
+  char comma[2] = "";
+  char **keys = listGetKeys(list);
+
+  for (int i=0; i < listNumKeys(list); i++) {
+    if (strcmp(keys[i], "id") == 0)
+      extra_args = "primary key";
+    else if (strcmp(keys[i], "name") == 0)
+      extra_args = "not null";
+    else
+      extra_args = "";
+
+    snprintf(buf, len, text, tmp, comma, keys[i], extra_args);
+    strncpy(tmp, buf, len);
+    comma[0] = ',';
+  }
+
+  text = "%s)";
+
+  // Any of the above can cause an overflow, but
+  // because we concatenate the strings cumulatively,
+  // we only have to check the last one
+  if (snprintf(buf, len, text, tmp) >= len)
+    return TD_BUFOVERFLOW;
+
+  return TD_OK;
+}
+
+void
+createBackend(list_T list, const char *filename)
+{
+  if (!(list && filename)) return;
+  sqlite3 *db;
+
+  int rc = sqlite3_open_v2(
+    filename,
+    &db,
+    SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
+    NULL
+  );
+  // TODO: if table exists, check if columns are consistent and if so, ask
+  // user if they want to sync
+  if (rc != SQLITE_OK) 
+    errExit("Failed to create sqlite3 backend");
+
+  runSQL(filename, list, NULL, genCreateSQL, NULL, processNoResultSQL);
+}

@@ -226,13 +226,16 @@ moveUp(const screen_T screen, line_T *line)
 static void 
 eventLoop(list_T list, const char *filename)
 {
-  // TODO: prompt to create list if filename is NULL
-  if (!filename) return;
+  // if (!filename) return;
 
   screen_T screen = screenNew();
   task_T task;
 
-  readTasks(list, filename);
+  // TODO: refactor this
+  // only read tasks if list is empty
+  if (!listGetCat(list, NULL)) 
+    readTasks(list, filename);
+
   screenInitialize(screen, list);
 
   viewListScreen(screen, list);
@@ -284,7 +287,8 @@ eventLoop(list_T list, const char *filename)
 
     case 'q': // Quit
       if (listNumUpdates(list) == 0) return;
-      else {
+      // TODO: prompt to create backend if it doesn't exist
+      else if (filename) {
         getyx(stdscr, save_row, save_col);
         statusMessage("Save changes before quitting? (y/n) ");
         answer = getch();
@@ -306,15 +310,18 @@ eventLoop(list_T list, const char *filename)
         move(save_row, save_col);
         break;
       }
-      statusMessage("Save changes? (y/n) ");
-      answer = getch();
-      if (answer == 'y') {
-        writeUpdates(list, filename);
-        statusMessage("Changes successfully saved to backend.");
-      } else
-        statusMessage("Changes not saved to backend.");
+      // TODO: prompt to create backend if it doesn't exist
+      if (filename) {
+        statusMessage("Save changes? (y/n) ");
+        answer = getch();
+        if (answer == 'y') {
+          writeUpdates(list, filename);
+          statusMessage("Changes successfully saved to backend.");
+        } else
+          statusMessage("Changes not saved to backend.");
 
-      move(save_row, save_col);
+        move(save_row, save_col);
+      }
       break;
 
     // TODO: create an undo option (this will require substantial work)
@@ -375,6 +382,8 @@ endwinAtExit()
   endwin();
 }
 
+// TODO: make this work even if filename isn't set.
+// the todo list would be only temporary and never saved to disk
 void
 view(list_T list, const char *filename)
 {

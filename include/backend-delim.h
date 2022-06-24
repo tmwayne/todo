@@ -24,6 +24,11 @@
 #include "task.h" // task_T
 #include "list.h" // list_T
 
+/**
+ * This will read in tasks from a delimited file. Currently all tasks
+ * are marked as NEW in order for them to be inserted into a new backend
+ * table instead of being update, which would fail.
+ */
 extern void readTasks_delim(list_T, const char *filename);
 
 #endif // BACKEND_DELIM_INCLUDED
