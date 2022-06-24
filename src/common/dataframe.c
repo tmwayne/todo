@@ -21,7 +21,7 @@
 #include <stdlib.h> // calloc, realloc
 #include <string.h> // strdup
 #include "dataframe.h"
-#include "error-codes.h"
+#include "return-codes.h"
 
 record_T
 recordNew()

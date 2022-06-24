@@ -11,8 +11,8 @@
 // any later version. This program is distributed without any warranty.
 //
 
-#ifndef ERROR_FUNCTIONS_H
-#define ERROR_FUNCTIONS_H
+#ifndef ERROR_FUNCTIONS_INCLUDED
+#define ERROR_FUNCTIONS_INCLUDED
 
 // Print to stderr the error text corresponding to the current value of errno
 void errMsg(const char *format, ...);
@@ -50,4 +50,4 @@ void usageErr(const char *format, ...) NORETURN;
 // Diagnose errors in command-line arguments
 void cmdLineErr(const char *format, ...) NORETURN;
 
-#endif // ERROR_FUNCTIONS_H
+#endif // ERROR_FUNCTIONS_INCLUDED

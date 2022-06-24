@@ -18,8 +18,8 @@
 // limitations under the License.
 //
 
-#ifndef ERRORCODES_INCLUDED
-#define ERRORCODES_INCLUDED
+#ifndef RETURNCODES_INCLUDED
+#define RETURNCODES_INCLUDED
 
 // TODO: rename this file return-codes.h
 
@@ -49,4 +49,4 @@ enum dataframeRCs {
 };
 
 
-#endif // ERRORCODES_INCLUDED
+#endif // RETURNCODES_INCLUDED

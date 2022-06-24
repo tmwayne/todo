@@ -23,7 +23,7 @@
 #ifndef LIST_INCLUDED
 #define LIST_INCLUDED
 
-#include "task.h"
+#include "task.h" // task_T
 
 // TODO: make naming of linked list heads consistent
 // some use the singular, some use the plural

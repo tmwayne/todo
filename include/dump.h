@@ -18,9 +18,9 @@
 // limitations under the License.
 //
 
-#ifndef DUMP_INCLUDED
-#define DUMP_INCLUDED
+#ifndef TD_DUMP_INCLUDED
+#define TD_DUMP_INCLUDED
 
 extern void dumpTasks(char *listname, const char *filename);
 
-#endif // DUMP_INCLUDED
+#endif // TD_DUMP_INCLUDED

@@ -24,7 +24,7 @@
 #include <ctype.h>  // isspace
 #include "parser.h"
 #include "delim-reader.h"
-#include "error-codes.h" 
+#include "return-codes.h" 
 
 int 
 yylex(YYSTYPE *yylvalp, struct scannerArgs yyscanner)

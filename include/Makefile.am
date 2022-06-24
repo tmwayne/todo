@@ -2,7 +2,7 @@ noinst_HEADERS = backend-sqlite3.h \
 	backend-delim.h \
 	dataframe.h \
 	delim-reader.h \
-	error-codes.h \
+	return-codes.h \
 	error-functions.h \
 	help.inc \
 	list.h \
