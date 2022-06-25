@@ -102,4 +102,6 @@ yylex(YYSTYPE *yylvalp, struct scannerArgs yyscanner)
     buf[i++] = c;
 
   }
+
+  return YYEOF;
 }

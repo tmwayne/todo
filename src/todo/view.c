@@ -288,15 +288,22 @@ eventLoop(list_T list, const char *filename)
       else if (filename) {
         getyx(stdscr, save_row, save_col);
         statusMessage("Save changes before quitting? (y/n) ");
-        answer = getch();
-        if (answer != 'y') return;
-        else if (writeUpdates(list, filename) == TD_OK) return;
-        else {
-          statusMessage("Unable to save changes. Quit anyway? (y/n) ");
-          answer = getch();
-          if (answer == 'y') return;
-          else move(save_row, save_col);
+        if (getch() != 'y') return;
+
+        int has_backend = 0;
+        int rc = backendCheck(list, filename);
+        if (rc == BE_DBNOTEXIST || rc == BE_TBLNOTEXIST) {
+          statusMessage("Initialize backend? (y/n) ");
+          if (getch() == 'y') 
+            if (backendCreate(list, filename) == TD_OK)
+              has_backend = 1;
         }
+
+        if (has_backend && writeUpdates(list, filename) == TD_OK) return;
+
+        statusMessage("Unable to save changes. Quit anyway? (y/n) ");
+        if (getch() == 'y') return;
+        else move(save_row, save_col);
       }
       break;
             
@@ -314,11 +321,13 @@ eventLoop(list_T list, const char *filename)
         if (rc == BE_DBNOTEXIST || rc == BE_TBLNOTEXIST) {
           statusMessage("Initialize backend? (y/n) ");
           if (getch() == 'y') backendCreate(list, filename);
-          else break;
+          else {
+            statusMessage("Changes not saved to backend.");
+            break;
+          }
         }
 
         statusMessage("Save changes? (y/n) ");
-        // answer = getch();
         if (getch() == 'y') {
           writeUpdates(list, filename);
           statusMessage("Changes successfully saved to backend.");

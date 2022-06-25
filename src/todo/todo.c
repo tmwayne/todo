@@ -145,9 +145,10 @@ main(int argc, char **argv)
 
   else if (is_arg("import")) {
     optind++;
-    char *import_filename = optind < argc ? argv[optind] : NULL;
+    if (optind == argc)
+      usageErr("Usage: %s [OPTIONS...] import filename\n", argv[0]);
+    char *import_filename = argv[optind];
     importTasks(list, &filename, import_filename);
-    // if (filename) createBackend(list, filename);
     view(list, filename);
   }
 

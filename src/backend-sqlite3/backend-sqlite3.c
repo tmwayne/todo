@@ -170,6 +170,9 @@ readTasks(list_T list, const char *filename)
 // -----------------------------------------------------------------------------
 // Check Backend
 // -----------------------------------------------------------------------------
+//
+  // TODO: if table exists, check if columns are consistent and if so, ask
+  // user if they want to sync
 
 // TODO: add a check for column consistency
 int
@@ -410,10 +413,10 @@ genCreateSQL(const list_T list, const task_T unused, char *buf, const size_t len
   return TD_OK;
 }
 
-void
+int
 backendCreate(list_T list, const char *filename)
 {
-  if (!(list && filename)) return;
+  if (!(list && filename)) return TD_INVALIDARG;
   sqlite3 *db;
 
   int rc = sqlite3_open_v2(
@@ -422,10 +425,9 @@ backendCreate(list_T list, const char *filename)
     SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
     NULL
   );
-  // TODO: if table exists, check if columns are consistent and if so, ask
-  // user if they want to sync
-  if (rc != SQLITE_OK) 
-    errExit("Failed to create sqlite3 backend");
 
-  runSQL(filename, list, NULL, genCreateSQL, NULL, processNoResultSQL);
+  if (rc != SQLITE_OK) 
+    return BE_DBNOTEXIST; // TODO: make this a more general db open error
+
+  return runSQL(filename, list, NULL, genCreateSQL, NULL, processNoResultSQL);
 }

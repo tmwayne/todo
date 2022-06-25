@@ -37,13 +37,15 @@ importTasks(list_T list, char **filename, char *import_filename)
   if (!(*filename)) {
     char *line = readline("Backend file doesn't exist. Create one? (y/n) ");
 
-    switch (line[0]) {
-    case 'y':
-      *filename = readline("File name: ");
+    if (line) {
+      switch (line[0]) {
+      case 'y':
+        *filename = readline("File name: ");
 
-    default:
-      free(line);
-      break;
+      default:
+        free(line);
+        break;
+      }
     }
   }
 }

@@ -27,6 +27,6 @@
 extern int  readTasks(list_T, const char *filename);
 extern int  writeUpdates(list_T, const char *filename);
 extern int  backendCheck(const list_T, const char *filename);
-extern void backendCreate(list_T, const char *filename);
+extern int  backendCreate(list_T, const char *filename);
 
 #endif // BACKEND_SQLITE3_INCLUDED

@@ -41,7 +41,9 @@ parseDelim(FILE *file, char sep, int headers, int quotes)
   
   dataframe_T data = dataframeNew();
 
-  if (yyparse(data, scanner) == -1)
+  // errExit("%d", yyparse(data, scanner));
+
+  if (yyparse(data, scanner) != 0)
     return NULL;
 
   return data;
