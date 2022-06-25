@@ -28,6 +28,9 @@
 void
 dumpTasks(char *listname, const char *filename)
 {
+  // TODO: what error handling do we want here?
+  if (!(listname && filename)) return;
+
   char command[MAX_SQL_LEN];
 
   // TODO: protect against SQL injection here
