@@ -21,12 +21,10 @@
 #ifndef RETURNCODES_INCLUDED
 #define RETURNCODES_INCLUDED
 
-// TODO: rename this file return-codes.h
-
 enum generalRCs {
-  TD_BUFOVERFLOW  = -2,
+  TD_OK           = 0,
   TD_INVALIDARG   = -1, // one of the arguments is invalid
-  TD_OK           = 0
+  TD_BUFOVERFLOW  = -2  // buffer wasn't large enough for text
 };
 
 enum editRCs {
@@ -35,18 +33,27 @@ enum editRCs {
 };
 
 enum readerRCs {
-  RD_ESYNTAX      = -2, // syntax error
-  RD_ENOMEM       = -1  // memory allocation failed
+  RD_ENOMEM       = -1, // memory allocation failed
+  RD_ESYNTAX      = -2  // syntax error
 };
 
 enum dataframeRCs {
-  DF_INVRECORD    = -5, // record has the wrong number of rows
-  DF_CORRUPT      = -4, // values in the dataframe are inconsistent
-  DF_ENOMEM       = -3, // memory allocation failed
-  DF_OOBARG       = -2, // argument is out-of-bounds
+  DF_OK           = 0,
   DF_NULLARG      = -1, // pointer argument is NULL
-  DF_OK           = 0
+  DF_OOBARG       = -2, // argument is out-of-bounds
+  DF_ENOMEM       = -3, // memory allocation failed
+  DF_CORRUPT      = -4, // values in the dataframe are inconsistent
+  DF_INVRECORD    = -5 // record has the wrong number of rows
 };
 
+enum backendRCs {
+  BE_DBNOTEXIST   = -1, // database file doesn't exist
+  BE_TBLNOTEXIST  = -2, // table doesn't exist
+  BE_COLINVALID   = -3, // some list keys aren't in table columns
+  BE_ESQLGEN      = -4, // error generating SQL statement
+  BE_ESQLPREP     = -5, // error preparing SQL statement with SQLite3
+  BE_ESQLBIND     = -6, // error binding SQL variables with SQLite3
+  BE_ESQLPROC     = -7  // error processing SQL results with SQLite3
+};
 
 #endif // RETURNCODES_INCLUDED

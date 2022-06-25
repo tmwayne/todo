@@ -130,8 +130,12 @@ main(int argc, char **argv)
 
   list_T list = listNew(listname);
 
-  if (optind == argc || is_arg("view"))
+  if (optind == argc || is_arg("view")) {
+    readTasks(list, filename);
     view(list, filename);
+  }
+
+  // TODO: add merge existing and import tasks
 
   // else if (is_arg("create"))
     // createList();
@@ -143,9 +147,8 @@ main(int argc, char **argv)
     optind++;
     char *import_filename = optind < argc ? argv[optind] : NULL;
     importTasks(list, &filename, import_filename);
-    if (filename) createBackend(list, filename);
+    // if (filename) createBackend(list, filename);
     view(list, filename);
-    // printf("filename: %s\n", filename);
   }
 
   else if (is_arg("help")) {

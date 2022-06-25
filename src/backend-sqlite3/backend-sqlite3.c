@@ -40,6 +40,16 @@
 // TODO: is there a non-arbitrary magic number we can use?
 #define MAX_SQL_LEN 2048
 
+// enum backendRCs {
+//   BE_DBNOTEXIST   = -1, // database file doesn't exist
+//   BE_TBLNOTEXIST  = -2, // table doesn't exist
+//   BE_COLINVALID   = -3  // some list keys aren't in table columns
+// };
+
+// -----------------------------------------------------------------------------
+// Template
+// -----------------------------------------------------------------------------
+
 static int
 runSQL(const char *filename, list_T list, task_T task,
   int genSQL(const list_T, const task_T, char *, const size_t),
@@ -56,7 +66,7 @@ runSQL(const char *filename, list_T list, task_T task,
   char sql[MAX_SQL_LEN];
   
   if (genSQL(list, task, sql, MAX_SQL_LEN) != TD_OK)
-    return -1; // TODO: return error code
+    return BE_ESQLGEN;
 
   rc = sqlite3_open_v2(
     filename,              // filename
@@ -66,7 +76,8 @@ runSQL(const char *filename, list_T list, task_T task,
   );
 
   if (rc != SQLITE_OK) 
-    sqlErr("Can't open database: %s", sqlite3_errmsg(db));
+    return BE_DBNOTEXIST;
+    // sqlErr("Can't open database: %s", sqlite3_errmsg(db));
 
   rc = sqlite3_prepare_v2(
     db,                    // db handle
@@ -77,14 +88,14 @@ runSQL(const char *filename, list_T list, task_T task,
   );
 
   if (rc != SQLITE_OK) 
-    sqlErr("Unable to prepare SQL for fetching tasks: %s", sqlite3_errmsg(db));
+    return BE_ESQLPREP;
 
   if (bindSQL)
     if (bindSQL(stmt, db, list, task) != TD_OK)
-      return -1; // TODO: return error code
+      return BE_ESQLBIND;
 
   if (processSQL(stmt, db, list, task) != TD_OK)
-    return -1; // TODO: return error code
+    return BE_ESQLPROC;
 
   sqlite3_finalize(stmt);
   sqlite3_close(db);
@@ -95,7 +106,9 @@ runSQL(const char *filename, list_T list, task_T task,
 static int
 processNoResultSQL(sqlite3_stmt *stmt, sqlite3 *db, list_T list, task_T task)
 {
-  if (sqlite3_step(stmt) != SQLITE_DONE) return -1; // TODO: return error code
+  if (sqlite3_step(stmt) != SQLITE_DONE) 
+    return BE_ESQLPROC;
+
   else return TD_OK;
 }
 
@@ -104,7 +117,7 @@ processNoResultSQL(sqlite3_stmt *stmt, sqlite3 *db, list_T list, task_T task)
 // -----------------------------------------------------------------------------
 
 static int
-genReadSQL(const list_T list, const task_T task, char *buf, const size_t len)
+genReadSQL(const list_T list, const task_T unused, char *buf, const size_t len)
 {
   if (snprintf(buf, len, "select * from %s", listName(list)) >= len)
     return TD_BUFOVERFLOW;
@@ -136,7 +149,8 @@ processReadSQL(sqlite3_stmt *stmt, sqlite3 *db, list_T list, task_T task)
       taskSet(task, sqlite3_column_name(stmt, i), 
         (char *) sqlite3_column_text(stmt, i));
 
-    if (taskCheckKeys(task) != TD_OK) return -1; // TODO: return error code
+    if (taskCheckKeys(task) != TD_OK) 
+      return BE_ESQLPROC;
 
     if (strcasecmp(taskGet(task, "status"), "Complete") != 0)
       listSetTask(list, task);
@@ -151,6 +165,18 @@ readTasks(list_T list, const char *filename)
 {
   return runSQL(filename, list, NULL, 
     genReadSQL, NULL, processReadSQL);
+}
+
+// -----------------------------------------------------------------------------
+// Check Backend
+// -----------------------------------------------------------------------------
+
+// TODO: add a check for column consistency
+int
+backendCheck(const list_T list, const char *filename)
+{
+  if (!filename) return TD_INVALIDARG;
+  return runSQL(filename, list, NULL, genReadSQL, NULL, processNoResultSQL);
 }
 
 // -----------------------------------------------------------------------------
@@ -385,7 +411,7 @@ genCreateSQL(const list_T list, const task_T unused, char *buf, const size_t len
 }
 
 void
-createBackend(list_T list, const char *filename)
+backendCreate(list_T list, const char *filename)
 {
   if (!(list && filename)) return;
   sqlite3 *db;

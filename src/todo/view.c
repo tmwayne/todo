@@ -226,24 +226,20 @@ moveUp(const screen_T screen, line_T *line)
 static void 
 eventLoop(list_T list, const char *filename)
 {
-  // if (!filename) return;
+  if (!list) return;
 
   screen_T screen = screenNew();
   task_T task;
 
-  // TODO: refactor this
-  // only read tasks if list is empty
-  if (!listGetCat(list, NULL)) 
-    readTasks(list, filename);
-
   screenInitialize(screen, list);
-
   viewListScreen(screen, list);
   line_T line = screenGetFirstLine(screen);
+
   move(0, 0);
   refresh();
 
   char c, answer;
+  int rc;
   int cur_row, cur_col, max_row, max_col; 
   int save_row, save_col;
   int status_row;
@@ -256,6 +252,7 @@ eventLoop(list_T list, const char *filename)
 
     clearStatusLine();
 
+    // TODO: check return codes of backend (write) functions
     switch (c) {
 
     case 'a': // Add task
@@ -310,11 +307,19 @@ eventLoop(list_T list, const char *filename)
         move(save_row, save_col);
         break;
       }
-      // TODO: prompt to create backend if it doesn't exist
+
       if (filename) {
+        // TODO: check if filename is NULL
+        rc = backendCheck(list, filename);
+        if (rc == BE_DBNOTEXIST || rc == BE_TBLNOTEXIST) {
+          statusMessage("Initialize backend? (y/n) ");
+          if (getch() == 'y') backendCreate(list, filename);
+          else break;
+        }
+
         statusMessage("Save changes? (y/n) ");
-        answer = getch();
-        if (answer == 'y') {
+        // answer = getch();
+        if (getch() == 'y') {
           writeUpdates(list, filename);
           statusMessage("Changes successfully saved to backend.");
         } else

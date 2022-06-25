@@ -31,7 +31,6 @@ importTasks(list_T list, char **filename, char *import_filename)
   if (!(list && filename)) return;
 
   // TODO: fix the case when import_filename is NULL so we use stdin, it's hanging
-  // TODO: add merge existing and import tasks
 
   readTasks_delim(list, import_filename);
 
