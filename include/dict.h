@@ -1,6 +1,6 @@
 // 
 // -----------------------------------------------------------------------------
-// backend-delim.h
+// dict.h
 // -----------------------------------------------------------------------------
 //
 // Copyright (c) 2022 Tyler Wayne
@@ -18,17 +18,21 @@
 // limitations under the License.
 //
 
-#ifndef BACKEND_DELIM_INCLUDED
-#define BACKEND_DELIM_INCLUDED
+#ifndef DICT_INCLUDED
+#define DICT_INCLUDED
 
-#include "task.h" // task_T
-#include "list.h" // list_T
+enum dictReturnCodes {
+  DT_OK = 0,
+  DT_EINVALARG = -1, // null pointer passed as argument
+  DT_EALLOC = -2     // unable to allocate memory
+};
 
-/**
- * This will read in tasks from a delimited file. Currently all tasks
- * are marked as NEW in order for them to be inserted into a new backend
- * table instead of being update, which would fail.
- */
-extern void readTasks_delim(list_T, const char *filename, const char sep);
+typedef struct dict_T *dict_T;
 
-#endif // BACKEND_DELIM_INCLUDED
+extern dict_T dictNew();
+extern int    dictSet(dict_T, const char *key, const char *val);
+extern char  *dictGet(const dict_T, const char *key);
+extern void   dictDump(const dict_T);
+extern void   dictFree(dict_T *);
+
+#endif // DICT_INCLUDED

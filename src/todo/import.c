@@ -25,14 +25,15 @@
 #include "list.h"              // list_T
 #include "backend-delim.h"     // readTasks_delim
 
+// TODO: pass a pointer with delim arguments instead of a single sep
 void
-importTasks(list_T list, char **filename, char *import_filename)
+importTasks(list_T list, char **filename, char *import_filename, char sep)
 {
   if (!(list && filename)) return;
 
   // TODO: fix the case when import_filename is NULL so we use stdin, it's hanging
 
-  readTasks_delim(list, import_filename);
+  readTasks_delim(list, import_filename, sep);
 
   if (!(*filename)) {
     char *line = readline("Backend file doesn't exist. Create one? (y/n) ");

@@ -1,6 +1,6 @@
 // 
 // -----------------------------------------------------------------------------
-// backend-delim.h
+// config-reader.h
 // -----------------------------------------------------------------------------
 //
 // Copyright (c) 2022 Tyler Wayne
@@ -18,17 +18,19 @@
 // limitations under the License.
 //
 
-#ifndef BACKEND_DELIM_INCLUDED
-#define BACKEND_DELIM_INCLUDED
+#ifndef CONFIG_READER_INCLUDED
+#define CONFIG_READER_INCLUDED
 
-#include "task.h" // task_T
-#include "list.h" // list_T
+#include <stdio.h>  // FILE
+#include "dict.h"   // dict_T
 
-/**
- * This will read in tasks from a delimited file. Currently all tasks
- * are marked as NEW in order for them to be inserted into a new backend
- * table instead of being update, which would fail.
- */
-extern void readTasks_delim(list_T, const char *filename, const char sep);
+// To avoid depending on the generated headers of flex and bison
+// we include these typedefs here
+typedef void *yyscan_t;
+typedef union YYSTYPE YYSTYPE;
 
-#endif // BACKEND_DELIM_INCLUDED
+extern int    cr_yylex(YYSTYPE *, yyscan_t);
+extern void   cr_yyerror(const dict_T, const yyscan_t, const char *msg);
+extern dict_T readConfig(dict_T, FILE *file);
+
+#endif // CONFIG_READER_INCLUDED

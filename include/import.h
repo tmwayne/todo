@@ -23,6 +23,7 @@
 
 #include "list.h" // list_T
 
-extern void importTasks(list_T, char **filename, const char *import_filename);
+extern void importTasks(list_T, char **filename, 
+  const char *import_filename, const char sep);
 
 #endif // IMPORT_INCLUDED

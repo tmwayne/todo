@@ -1,6 +1,6 @@
 // 
 // -----------------------------------------------------------------------------
-// backend-delim.h
+// parser.y
 // -----------------------------------------------------------------------------
 //
 // Copyright (c) 2022 Tyler Wayne
@@ -18,17 +18,49 @@
 // limitations under the License.
 //
 
-#ifndef BACKEND_DELIM_INCLUDED
-#define BACKEND_DELIM_INCLUDED
+%{
+#include <stdio.h>
+#include "parser.h"
+#include "config-reader.h"
+#include "dict.h"
 
-#include "task.h" // task_T
-#include "list.h" // list_T
+// int cr_yylex(YYSTYPE *, yyscan_t);
+// void cr_yyerror(const dict_T, const yyscan_t, const char *);
 
-/**
- * This will read in tasks from a delimited file. Currently all tasks
- * are marked as NEW in order for them to be inserted into a new backend
- * table instead of being update, which would fail.
- */
-extern void readTasks_delim(list_T, const char *filename, const char sep);
+%}
 
-#endif // BACKEND_DELIM_INCLUDED
+%define parse.trace
+%define api.pure full
+
+%code requires {
+  typedef struct dict_T *dict_T;
+  typedef void *yyscan_T;
+}
+
+%parse-param{ dict_T configs }
+%param{ yyscan_T scanner }
+
+%union {
+  char *str;
+}
+
+%token <str> NAME STRING
+%token EOL
+
+%type <s> line
+
+%%
+
+input:
+  /* nothing */
+  | input EOL
+  | input line EOL
+  | input error             { yyerrok; }
+  ;
+
+line: 
+    NAME '=' NAME           { dictSet(configs, $1, $3); }
+  | NAME '=' STRING         { dictSet(configs, $1, $3); }
+  ; 
+
+%%

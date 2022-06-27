@@ -1,6 +1,6 @@
-// 
+//
 // -----------------------------------------------------------------------------
-// backend-delim.h
+// config-reader.c
 // -----------------------------------------------------------------------------
 //
 // Copyright (c) 2022 Tyler Wayne
@@ -17,18 +17,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+//
 
-#ifndef BACKEND_DELIM_INCLUDED
-#define BACKEND_DELIM_INCLUDED
+#include <stdio.h>  // fprintf
+#include "parser.h" // yyparse
+#include "lexer.h"  // yylex_init, yyset_in, yylex_destroy
+#include "dict.h"   // dict_T, dictNew
+#include "config-reader.h"
 
-#include "task.h" // task_T
-#include "list.h" // list_T
+void 
+cr_yyerror(const dict_T dict, const yyscan_t scanner, const char *msg)
+{
+  fprintf(stderr, "Error: %s\n", msg);
+}
 
-/**
- * This will read in tasks from a delimited file. Currently all tasks
- * are marked as NEW in order for them to be inserted into a new backend
- * table instead of being update, which would fail.
- */
-extern void readTasks_delim(list_T, const char *filename, const char sep);
+dict_T
+readConfig(dict_T configs, FILE *file)
+{
+  if (!file) return NULL;
+  if (!configs) configs = dictNew();
 
-#endif // BACKEND_DELIM_INCLUDED
+  yyscan_t scanner;
+  cr_yylex_init(&scanner);
+  cr_yyset_in(file, scanner);
+
+  if (cr_yyparse(configs, scanner) == -1)
+    return NULL;
+
+  cr_yylex_destroy(scanner);
+
+  return configs;
+}

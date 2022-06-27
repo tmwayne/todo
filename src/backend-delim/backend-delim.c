@@ -28,15 +28,17 @@
 #include "error-functions.h" // errExit
 
 void
-readTasks_delim(list_T list, const char *filename)
+readTasks_delim(list_T list, const char *filename, const char sep)
 {
   FILE *file = filename ? fopen(filename, "r") : stdin;
   if (!file)
     sysErrExit("Failed to open delimited data");
+  // TODO: check value of sep
 
+  // TODO: pass the FILE * through yyscan_t scanner not this struct
   dataframe_T data = parseDelim(
     file,       //
-    '|',        // separator
+    sep,        // separator
     1,          // headers
     1           // quotes
   );

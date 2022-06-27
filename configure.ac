@@ -20,6 +20,7 @@ AC_CONFIG_HEADERS([config.h])
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_YACC
+AM_PROG_LEX([noyywrap])
 
 # Checks for libraries.
 AC_SEARCH_LIBS([dlopen], [dl])
@@ -44,6 +45,7 @@ AC_CONFIG_FILES([
   src/common/Makefile
   src/backend-sqlite3/Makefile
   src/backend-delim/Makefile
+  src/config-reader/Makefile
   src/todo/Makefile
   test/Makefile
   test/unit/Makefile])

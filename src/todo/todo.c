@@ -23,6 +23,8 @@
 #include <string.h>          // strcmp
 #include <getopt.h>          // getopt_long
 #include "error-functions.h" // usageErr
+#include "dict.h"            // dict_T, dictNew, dictSet, dictSet, dictFree
+#include "config-reader.h"   // readConfig
 #include "task.h"            // task_T
 #include "view.h"            // view
 #include "import.h"          // import
@@ -65,10 +67,24 @@ int
 main(int argc, char **argv)
 {
 
-  // char *filename  = "test/data/test-db.sqlite3";
-  char *filename  = NULL;
-  char *listname  = "default_list";
-  char  sep       = ',';
+  dict_T configs = dictNew();
+  if (!configs)
+    errExit("Unable to allocate configuration dict");
+
+  // Defaults
+  // TODO: enable values to be typed instead of all char *
+  // TODO: need to do tilde expansion on the pathname (wordexp)
+  dictSet(configs, "filename", "/home/tyler/.config/todo/todo.sqlite3");
+  dictSet(configs, "listname", "default_list");
+  dictSet(configs, "set", ",");
+
+  // Configuration File
+  FILE *config_file = fopen("/home/tyler/.config/todorc", "r");
+  if (config_file) {
+    readConfig(configs, config_file);
+    if (!configs)
+      errExit("Failed to parse configuration file");
+  }
 
   int option_index = 0;
   struct option longopts[] = {
@@ -96,7 +112,7 @@ main(int argc, char **argv)
     */
 
     case 'f': // filename
-      filename = strdup(optarg);
+      dictSet(configs, "filename", optarg);
       break;
 
     case 'h': // help
@@ -104,11 +120,11 @@ main(int argc, char **argv)
       exit(EXIT_SUCCESS);
 
     case 'l': // listname
-      listname = strdup(optarg);
+      dictSet(configs, "listname", optarg);
       break;
 
     case 's': // sep
-      sep = *optarg;
+      dictSet(configs, "sep", optarg);
       break;
 
     case 'V': // version
@@ -124,6 +140,9 @@ main(int argc, char **argv)
     }
   }
 
+  char *listname = dictGet(configs, "listname");
+  char *filename = dictGet(configs, "filename");
+
   if (optind > argc) usageErr(USAGE, argv[0]);
 
 #define is_arg(x) (strcmp(argv[optind], (x)) == 0)
@@ -135,10 +154,7 @@ main(int argc, char **argv)
     view(list, filename);
   }
 
-  // TODO: add merge existing and import tasks
-
-  // else if (is_arg("create"))
-    // createList();
+  // TODO: add merge existing
 
   else if (is_arg("dump"))
     dumpTasks(listname, filename);
@@ -148,7 +164,8 @@ main(int argc, char **argv)
     if (optind == argc)
       usageErr("Usage: %s [OPTIONS...] import filename\n", argv[0]);
     char *import_filename = argv[optind];
-    importTasks(list, &filename, import_filename);
+    // TODO: pass sep from configs dictionary
+    importTasks(list, &filename, import_filename, '|');
     view(list, filename);
   }
 
@@ -159,6 +176,8 @@ main(int argc, char **argv)
 
   else
     usageErr("Command not recognized\n");
+
+  dictFree(&configs);
 
   exit(EXIT_SUCCESS);
 
