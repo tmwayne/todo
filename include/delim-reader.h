@@ -24,11 +24,6 @@
 #include "parser.h"    // YYSTYPE
 #include "dataframe.h" // dataframe_T
 
-enum readerRCs {
-  RD_ENOMEM       = -1, // memory allocation failed
-  RD_ESYNTAX      = -2  // syntax error
-};
-
 struct delimArgs {
   FILE *yyin;
   char sep;

@@ -24,9 +24,6 @@
 #include <ctype.h>  // isspace
 #include "parser.h"
 #include "delim-reader.h"
-#include "return-codes.h" 
-
-// TODO: return a flex error code not a self-defined one
 
 int 
 yylex(YYSTYPE *yylvalp, struct delimArgs yyscanner)
@@ -34,7 +31,7 @@ yylex(YYSTYPE *yylvalp, struct delimArgs yyscanner)
   char c;
   int len = 64, i = 0, inquote = 0;
   char *buf = calloc(len, sizeof(char));
-  if (!buf) return RD_ENOMEM;
+  if (!buf) return YYerror;
 
   while ((c = getc(yyscanner.yyin)) != EOF) {
 
@@ -79,11 +76,11 @@ yylex(YYSTYPE *yylvalp, struct delimArgs yyscanner)
 
         // The second quote must be either be the last character
         // in a field or escaped
-        else return RD_ESYNTAX;
+        else return YYerror;
 
       // A quote can't be in a string if it's not the first character
       } else if (i)
-        return RD_ESYNTAX;
+        return YYerror;
 
       else {
         inquote = 1;
@@ -96,9 +93,9 @@ yylex(YYSTYPE *yylvalp, struct delimArgs yyscanner)
 
     // Field (default)
     if (i >= len - 1) {
-      len >>= 1;
+      len *= 2;
       char *resized = realloc(buf, len * sizeof(*buf));
-      if (!resized) return RD_ENOMEM;
+      if (!resized) return YYerror;
       buf = resized;
     }
     buf[i++] = c;

@@ -62,10 +62,8 @@ input:
                           else                 dataframePush(data, record);
                           record = NULL; }
 
-  | input record EOL    { if(dataframePush(data, record) != DF_OK) yyerrok;
+  | input record EOL    { if(dataframePush(data, record) != DF_OK) YYERROR;
                           record = NULL; }
-
-  | input error         { yyerrok; }
   ;
 
 record:
@@ -76,10 +74,8 @@ record:
   ;
 
 field:
-  %empty                { $$ = ""; }
-
+  /* nothing */         { $$ = ""; }
   | FIELD               { $$ = $1; }
   ;
 
 %%
-
