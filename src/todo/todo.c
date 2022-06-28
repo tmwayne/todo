@@ -22,6 +22,7 @@
 #include <stdlib.h>          // exit, EXIT_SUCCESS, EXIT_FAILURE
 #include <string.h>          // strcmp
 #include <getopt.h>          // getopt_long
+#include <wordexp.h>         // wordexp_t, wordexp, wordfree
 #include "error-functions.h" // usageErr
 #include "dict.h"            // dict_T, dictNew, dictSet, dictSet, dictFree
 #include "config-reader.h"   // readConfig
@@ -63,6 +64,27 @@ Commands:                                                   \n\
 Run '%s COMMAND --help' for more information on a command.  \n\
 ";
 
+static char *
+expandPath(char *filename)
+{
+  // Return an empty string instead of NULL so that callers
+  // don't have to worry about dereferencing a NULL pointer
+  if (!filename) return strdup("");
+
+  wordexp_t p;
+  // wordexp returns 0 on success
+  if(wordexp(filename, &p, 0) || !p.we_wordc)
+    errExit("Unable to expand filename");
+  else if (p.we_wordc > 1)
+    errExit("Filename expanded to multiple results");
+
+  char *out = strdup(p.we_wordv[0]);
+  wordfree(&p);
+
+  return out;
+}
+  
+
 int 
 main(int argc, char **argv)
 {
@@ -72,20 +94,20 @@ main(int argc, char **argv)
     errExit("Unable to allocate configuration dict");
 
   // Defaults
-  // TODO: enable values to be typed instead of all char *
-  // TODO: need to do tilde expansion on the pathname (wordexp)
-  dictSet(configs, "filename", "/home/tyler/.config/todo/todo.sqlite3");
+  dictSet(configs, "filename", "todo.sqlite3");
   dictSet(configs, "listname", "default_list");
   dictSet(configs, "sep", ",");
 
   // Configuration File
-  FILE *config_file = fopen("/home/tyler/.config/todo/todorc", "r");
+  char *config_fn = expandPath("~/.config/todo/todorc");
+  FILE *config_file = fopen(config_fn, "r");
   if (config_file) {
     readConfig(configs, config_file);
     if (!configs)
       errExit("Failed to parse configuration file");
   }
 
+  // Command-line Arguments
   int option_index = 0;
   struct option longopts[] = {
   // name         has_arg             flag  val
@@ -100,7 +122,6 @@ main(int argc, char **argv)
   while (1) {
 
     int opt = getopt_long(argc, argv, "f:hl:s:V", longopts, &option_index);
-
     if (opt == -1) break;
 
     switch (opt) {
@@ -141,7 +162,7 @@ main(int argc, char **argv)
   }
 
   char *listname = dictGet(configs, "listname");
-  char *filename = dictGet(configs, "filename");
+  char *filename = expandPath(dictGet(configs, "filename"));
 
   if (optind > argc) usageErr(USAGE, argv[0]);
 
@@ -177,6 +198,8 @@ main(int argc, char **argv)
     usageErr("Command not recognized\n");
 
   dictFree(&configs);
+  free(config_fn);
+  free(filename);
 
   exit(EXIT_SUCCESS);
 

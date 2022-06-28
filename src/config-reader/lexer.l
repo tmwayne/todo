@@ -32,7 +32,7 @@
 #include "config-reader.h"
 #include "parser.h"
 
-char *duplicate_segment(const char *, int);
+static char *dupUnquoted(const char *, int);
 
 %}
 
@@ -41,7 +41,7 @@ char *duplicate_segment(const char *, int);
 [a-zA-Z][_0-9a-zA-Z]*   { yylval_param->str = strdup(yytext);
                           return NAME; }
 
-\"(\\.|[^\\\"])*\"      { yylval_param->str = duplicate_segment(yytext+1, yyleng-2);
+\"(\\.|[^\\\"])*\"      { yylval_param->str = dupUnquoted(yytext+1, yyleng-2);
                           return STRING; }
 
 =                       { return yytext[0]; }
@@ -53,7 +53,9 @@ char *duplicate_segment(const char *, int);
 
 %%
 
-char *duplicate_segment(const char *token, const int len) {
+static char *
+dupUnquoted(const char *token, const int len) 
+{
   // TODO: handle memory allocation error
   char *buf = malloc(len + 1);
   memcpy(buf, token, len);
