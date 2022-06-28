@@ -25,6 +25,7 @@
 #include <sqlite3.h>
 #include "task.h"
 #include "list.h"
+#include "backend-sqlite3.h"
 #include "return-codes.h"
 #include "error-functions.h" // errExit
 

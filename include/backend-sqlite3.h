@@ -24,6 +24,16 @@
 #include "task.h" // task_T
 #include "list.h" // list_T
 
+enum backendReturnCodes {
+  BE_DBNOTEXIST   = -1, // database file doesn't exist
+  BE_TBLNOTEXIST  = -2, // table doesn't exist
+  BE_COLINVALID   = -3, // some list keys aren't in table columns
+  BE_ESQLGEN      = -4, // error generating SQL statement
+  BE_ESQLPREP     = -5, // error preparing SQL statement with SQLite3
+  BE_ESQLBIND     = -6, // error binding SQL variables with SQLite3
+  BE_ESQLPROC     = -7  // error processing SQL results with SQLite3
+};
+
 extern int  readTasks(list_T, const char *filename);
 extern int  writeUpdates(list_T, const char *filename);
 extern int  backendCheck(const list_T, const char *filename);

@@ -30,18 +30,18 @@
 void
 readTasks_delim(list_T list, const char *filename, const char sep)
 {
-  FILE *file = filename ? fopen(filename, "r") : stdin;
+  FILE *file = fopen(filename, "r");
   if (!file)
     sysErrExit("Failed to open delimited data");
-  // TODO: check value of sep
 
-  // TODO: pass the FILE * through yyscan_t scanner not this struct
-  dataframe_T data = parseDelim(
-    file,       //
-    sep,        // separator
-    1,          // headers
-    1           // quotes
-  );
+  struct delimArgs args = {
+    .yyin    = file,
+    .sep     = sep,
+    .headers = 1,
+    .quotes  = 1
+  };
+
+  dataframe_T data = parseDelim(args);
 
   if (!data)
     errExit("Failed to parse delimited data");

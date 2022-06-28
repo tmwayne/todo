@@ -21,6 +21,15 @@
 #ifndef DATAFRAME_INCLUDED
 #define DATAFRAME_INCLUDED
 
+enum dataframeReturnCodes {
+  DF_OK           = 0,
+  DF_NULLARG      = -1, // pointer argument is NULL
+  DF_OOBARG       = -2, // argument is out-of-bounds
+  DF_ENOMEM       = -3, // memory allocation failed
+  DF_CORRUPT      = -4, // values in the dataframe are inconsistent
+  DF_INVRECORD    = -5  // record has the wrong number of rows
+};
+
 typedef char *field_T;
 
 typedef struct record {

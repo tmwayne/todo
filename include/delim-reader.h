@@ -24,17 +24,22 @@
 #include "parser.h"    // YYSTYPE
 #include "dataframe.h" // dataframe_T
 
-struct scannerArgs {
+enum readerRCs {
+  RD_ENOMEM       = -1, // memory allocation failed
+  RD_ESYNTAX      = -2  // syntax error
+};
+
+struct delimArgs {
   FILE *yyin;
   char sep;
   int headers;
   int quotes;
 };
 
-extern int  yylex(YYSTYPE *, struct scannerArgs);
-extern void yyerror(const dataframe_T, const struct scannerArgs, const char *);
+extern int  yylex(YYSTYPE *, const struct delimArgs);
+extern void yyerror(const dataframe_T, const struct delimArgs, const char *);
 
-extern dataframe_T parseDelim(FILE *file, char sep, int headers, int quotes);
+extern dataframe_T parseDelim(const struct delimArgs);
 
 
 #endif // READER_INCLUDED

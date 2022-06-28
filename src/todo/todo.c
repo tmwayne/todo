@@ -76,10 +76,10 @@ main(int argc, char **argv)
   // TODO: need to do tilde expansion on the pathname (wordexp)
   dictSet(configs, "filename", "/home/tyler/.config/todo/todo.sqlite3");
   dictSet(configs, "listname", "default_list");
-  dictSet(configs, "set", ",");
+  dictSet(configs, "sep", ",");
 
   // Configuration File
-  FILE *config_file = fopen("/home/tyler/.config/todorc", "r");
+  FILE *config_file = fopen("/home/tyler/.config/todo/todorc", "r");
   if (config_file) {
     readConfig(configs, config_file);
     if (!configs)
@@ -164,8 +164,7 @@ main(int argc, char **argv)
     if (optind == argc)
       usageErr("Usage: %s [OPTIONS...] import filename\n", argv[0]);
     char *import_filename = argv[optind];
-    // TODO: pass sep from configs dictionary
-    importTasks(list, &filename, import_filename, '|');
+    importTasks(list, &filename, import_filename, *dictGet(configs, "sep"));
     view(list, filename);
   }
 

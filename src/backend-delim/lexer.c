@@ -26,8 +26,10 @@
 #include "delim-reader.h"
 #include "return-codes.h" 
 
+// TODO: return a flex error code not a self-defined one
+
 int 
-yylex(YYSTYPE *yylvalp, struct scannerArgs yyscanner)
+yylex(YYSTYPE *yylvalp, struct delimArgs yyscanner)
 {
   char c;
   int len = 64, i = 0, inquote = 0;

@@ -25,6 +25,11 @@
 #include "list.h"   // list_T
 #include "screen.h" // line_T
 
+enum editReturnCodes {
+  ET_UNMOD        = 0,  // task wasn't modified
+  ET_MOD          = 1   // task was modified
+};
+
 extern int  editTask(list_T, task_T);
 extern void addTask(list_T, line_T);
 

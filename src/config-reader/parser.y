@@ -24,9 +24,6 @@
 #include "config-reader.h"
 #include "dict.h"
 
-// int cr_yylex(YYSTYPE *, yyscan_t);
-// void cr_yyerror(const dict_T, const yyscan_t, const char *);
-
 %}
 
 %define parse.trace

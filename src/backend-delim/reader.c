@@ -20,30 +20,22 @@
 
 #include <stdio.h>           // FILE
 #include "parser.h"          // yyparse
-#include "delim-reader.h"    // scannerArgs
+#include "delim-reader.h"    // delimArgs
 #include "dataframe.h"       // dataframe_T, dataframeNew
 
 void
-yyerror(const dataframe_T data, const struct scannerArgs scanner, const char *msg)
+yyerror(const dataframe_T data, const struct delimArgs args, const char *msg)
 {
-  fprintf(stderr, "Error: %s\n", msg);
+  // We handle errors by returning NULL in parseDelim
+  return;
 }
 
 dataframe_T
-parseDelim(FILE *file, char sep, int headers, int quotes)
+parseDelim(struct delimArgs args)
 {
-  struct scannerArgs scanner = {
-    .yyin     = file,
-    .sep      = sep,
-    .headers  = headers,
-    .quotes   = quotes
-  };
-  
   dataframe_T data = dataframeNew();
 
-  // errExit("%d", yyparse(data, scanner));
-
-  if (yyparse(data, scanner) != 0)
+  if (yyparse(data, args) != 0)
     return NULL;
 
   return data;

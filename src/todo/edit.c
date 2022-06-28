@@ -30,6 +30,7 @@
 #include <inttypes.h>        // uint32_t, uint8_t
 #include <fcntl.h>           // open
 #include "error-functions.h" // errExit, fatal
+#include "edit.h"
 #include "return-codes.h"    // TD_OK
 #include "task.h"            // elem_T
 #include "list.h"            // list_T

@@ -27,9 +27,7 @@
 #include "parser.h"
 #include "delim-reader.h"
 #include "dataframe.h"
-#include "return-codes.h"
 
-int nfields = 0;
 record_T record;
 char *val;
 
@@ -41,7 +39,7 @@ char *val;
 
 %code requires {
   typedef struct dataframe *dataframe_T;
-  typedef struct scannerArgs scanner_T;
+  typedef struct delimArgs scanner_T;
 }
 
 %parse-param{ dataframe_T data }
@@ -60,15 +58,11 @@ char *val;
 %%
 
 input:
-  record EOL            { if (scanner.headers) 
-                            dataframeSetHeaders(data, record);
-                          else
-                            dataframePush(data, record);
+  record EOL            { if (scanner.headers) dataframeSetHeaders(data, record);
+                          else                 dataframePush(data, record);
                           record = NULL; }
 
-                        // TODO: figure out the best way to handle errors
-  | input record EOL    { if(dataframePush(data, record) != DF_OK)
-                            return -1;
+  | input record EOL    { if(dataframePush(data, record) != DF_OK) yyerrok;
                           record = NULL; }
 
   | input error         { yyerrok; }
@@ -77,7 +71,6 @@ input:
 record:
   field                 { if (!record) record = recordNew();
                           recordPush(record, $1); }
-                          
 
   | record SEP field    { recordPush(record, $3); }
   ;
