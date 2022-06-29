@@ -18,10 +18,9 @@
  * limitations under the License.
  */
 
-%option noyywrap yylineno nodefault
-%option noinput nounput
+%option noyywrap yylineno nodefault noinput nounput
 %option reentrant bison-bridge
-%option batch never-interactive
+%option full
 
 %option prefix="cr_yy"
 %option outfile="lexer.c" header-file="lexer.h"
