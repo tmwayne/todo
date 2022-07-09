@@ -290,13 +290,13 @@ eventLoop(list_T list, const char *filename)
         statusMessage("Save changes before quitting? (y/n) ");
         if (getch() != 'y') return;
 
-        int has_backend = 0;
+        int has_backend = 1;
         int rc = backendCheck(list, filename);
         if (rc == BE_DBNOTEXIST || rc == BE_TBLNOTEXIST) {
+          has_backend = 0;
           statusMessage("Initialize backend? (y/n) ");
-          if (getch() == 'y') 
-            if (backendCreate(list, filename) == TD_OK)
-              has_backend = 1;
+          if (getch() == 'y' && backendCreate(list, filename) == TD_OK)
+            has_backend = 1;
         }
 
         if (has_backend && writeUpdates(list, filename) == TD_OK) return;

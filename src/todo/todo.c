@@ -171,6 +171,7 @@ main(int argc, char **argv)
   list_T list = listNew(listname);
 
   if (optind == argc || is_arg("view")) {
+    // TODO: Check the return code of readTasks
     readTasks(list, filename);
     view(list, filename);
   }

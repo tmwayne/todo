@@ -41,11 +41,7 @@
 // TODO: is there a non-arbitrary magic number we can use?
 #define MAX_SQL_LEN 2048
 
-// enum backendRCs {
-//   BE_DBNOTEXIST   = -1, // database file doesn't exist
-//   BE_TBLNOTEXIST  = -2, // table doesn't exist
-//   BE_COLINVALID   = -3  // some list keys aren't in table columns
-// };
+// TODO: make sure there is error detection for all sqlite3 calls
 
 // -----------------------------------------------------------------------------
 // Template
@@ -107,10 +103,15 @@ runSQL(const char *filename, list_T list, task_T task,
 static int
 processNoResultSQL(sqlite3_stmt *stmt, sqlite3 *db, list_T list, task_T task)
 {
-  if (sqlite3_step(stmt) != SQLITE_DONE) 
+  int rc = sqlite3_step(stmt);
+
+  // We might use this to throw away the results after checking 
+  // the existence of a table. Therefore SQLITE_ROW is an acceptable
+  // return value
+  if (!(rc == SQLITE_DONE || rc == SQLITE_ROW))
     return BE_ESQLPROC;
 
-  else return TD_OK;
+  return TD_OK;
 }
 
 // -----------------------------------------------------------------------------
@@ -140,6 +141,7 @@ processReadSQL(sqlite3_stmt *stmt, sqlite3 *db, list_T list, task_T task)
   while ((rc = sqlite3_step(stmt)) != SQLITE_DONE) {
 
     if (rc == SQLITE_ERROR)
+      // TODO: return error code instead of exiting
       sqlErr("Unable to fetch tasks: %s", sqlite3_errmsg(db));
 
     task_T task = taskNew();
@@ -200,7 +202,7 @@ genUpdateSQL(const list_T list, const task_T task, char *buf, const size_t len)
 {
   if (!(buf && len)) return TD_INVALIDARG;
 
-  elem_T elem;
+  // elem_T elem;
   char tmp[len];
 
   // TODO: need to guard against SQL injection in the list name
@@ -211,14 +213,14 @@ genUpdateSQL(const list_T list, const task_T task, char *buf, const size_t len)
   strncpy(tmp, buf, len);
 
   //      buf (comma) key = ?X
-  text = "%s %s %s = ?%d";
-  char comma[2] = "";
+  text = "%s%s%s=?%d";
+  char comma[2] = " ";
   char *key;
 
   int i;
   for (i=0; i < taskSize(task); i++) {
   
-    elem = taskElemInd(task, i);
+    // elem = taskElemInd(task, i);
     key = elemKey(taskElemInd(task, i));
     if (strcmp(key, "id") == 0) continue;
 
@@ -229,7 +231,7 @@ genUpdateSQL(const list_T list, const task_T task, char *buf, const size_t len)
 
   }
 
-  text = " %s where id = ?%d";
+  text = "%s where id=?%d";
 
   // Any of the above can cause an overflow, but
   // because we concatenate the strings cumulatively,
@@ -249,10 +251,12 @@ bindUpdateSQL(sqlite3_stmt *stmt, sqlite3 *db, const list_T list, const task_T t
   for (i=0; i < taskSize(task); i++) {
     elem = taskElemInd(task, i);
     if (strcmp(elemKey(elem), "id") == 0) continue;
-    sqlite3_bind_text(stmt, i+1, elemVal(elem), -1, SQLITE_STATIC);
+    if (sqlite3_bind_text(stmt, i+1, elemVal(elem), -1, SQLITE_STATIC) != SQLITE_OK)
+      return BE_ESQLBIND;
   }
 
-  sqlite3_bind_text(stmt, i+1, taskGet(task, "id"), -1, SQLITE_STATIC);
+  if (sqlite3_bind_text(stmt, i+1, taskGet(task, "id"), -1, SQLITE_STATIC) != SQLITE_OK)
+    return BE_ESQLBIND;
 
   return TD_OK;
 }
