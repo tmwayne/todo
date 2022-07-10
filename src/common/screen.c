@@ -3,8 +3,6 @@
 // screen.c
 // -----------------------------------------------------------------------------
 //
-// Description
-//
 // Copyright (c) 2022 Tyler Wayne
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,18 +28,16 @@
 #include "screen.h"
 
 struct line_T {
+  int lineno;
   int level;    // indentation level
-  int hidden;   // should the line be hidden?
+  // int hidden;   // should the line be hidden?
   int type;     // type of line (string, category, task)
   void *obj;    // pointer to line object
   line_T llink;
   line_T rlink;
 };
 
-struct screen_T {
-  int nlines;
-  line_T lines;
-};
+// TODO: add ability to increase/decrease offset
 
 screen_T
 screenNew()
@@ -51,13 +47,15 @@ screenNew()
   return screen;
 }
 
-int
-screenAddLine(screen_T screen, int type, void *obj, int level)
+static int
+screenAddLine(screen_T screen, const int type, void *obj, const int level, const int lineno)
 {
+
   line_T line;
   line = memCalloc(1, sizeof(*line));
   if (!line) return -1;
 
+  line->lineno = lineno;
   line->level = level;
   line->type = type;
   line->obj = obj;
@@ -75,26 +73,30 @@ screenAddLine(screen_T screen, int type, void *obj, int level)
   tail->rlink = line;
   line->llink = tail;
 
-  if (type == LT_TASK) {
-    char *status = taskGet((task_T) obj, "status");
-    if (strcasecmp(status, "Complete") == 0)
-      line->hidden = 1;
-  }
-
   return TD_OK;
 }
 
-int
-screenAddTasks(screen_T screen, task_T task, int level)
+/**
+ * This function recursively traverses the task tree for a category
+ * and adds tasks and subtasks. It also includes a lineno. We wait
+ * to see if a task is non-null, that is the parent task or previous
+ * task was not a leaf, before incrementing the line count
+ */
+static int
+screenAddTasks(screen_T screen, const task_T task, const int level, int lineno)
 {
-  if (!task) return TD_OK;
+  // Skip NULL tasks or completed tasks
+  if (!task) return lineno; 
 
-  screenAddLine(screen, LT_TASK, task, level);
+  if (strcasecmp(taskGet(task, "status"), "Complete") != 0) {
+    lineno++;
+    screenAddLine(screen, LT_TASK, task, level, lineno);
+  }
 
-  screenAddTasks(screen, taskGetSubtask(task), level+1); // TODO: check return codes
-  screenAddTasks(screen, taskGetNext(task), level); // TODO: check return code
+  lineno = screenAddTasks(screen, taskGetSubtask(task), level+1, lineno); 
+  lineno = screenAddTasks(screen, taskGetNext(task), level, lineno); 
 
-  return TD_OK;
+  return lineno;
 }
 
 
@@ -102,17 +104,18 @@ int
 screenInitialize(screen_T screen, const list_T list)
 {
   cat_T cat = NULL;
+  int lineno = 0;
   while ((cat = listGetCat(list, cat))) {
     if (catNumOpen(cat) <= 0) continue;
 
-    screenAddLine(screen, LT_CAT, cat, 0); 
+    screenAddLine(screen, LT_CAT, cat, 0, lineno);
 
     task_T task = catGetTask(cat, NULL);
     if (!task) return -1; // TODO: return error code
 
-    screenAddTasks(screen, task, 1); // TODO: check return code
-
-    screenAddLine(screen, LT_STR, strdup(""), 0); // add separating line
+    // Increment once to bring it to the current line
+    // and a second time to add a blank line
+    lineno = screenAddTasks(screen, task, 1, lineno) + 2;
   }
 
   return TD_OK;
@@ -128,6 +131,18 @@ screenReset(screen_T *screen, const list_T list)
   *screen = new;
 
   return TD_OK;
+}
+
+line_T
+screenGetLine(const screen_T screen, const int lineno)
+{
+  if (!screen || lineno < 0 || lineno >= screen->nlines) return NULL;
+
+  struct line_T *line = screen->lines;
+  for ( ; line->lineno < lineno ; line = line->rlink) ;
+
+  if (line->lineno == lineno) return line;
+  else return NULL;
 }
 
 line_T
@@ -158,6 +173,13 @@ screenFree(screen_T *screen)
 // -----------------------------------------------------------------------------
 
 int
+lineNum(const line_T line)
+{
+  if (!line) return -1;
+  else return line->lineno;
+}
+
+int
 lineType(const line_T line)
 {
   if (!line) return TD_INVALIDARG;
@@ -176,33 +198,4 @@ lineLevel(const line_T line)
 {
   if (!line) return TD_INVALIDARG;
   else return line->level;
-}
-
-int
-lineIsHidden(const line_T line)
-{
-  if (!line) return TD_INVALIDARG;
-  else return line->hidden;
-}
-
-line_T
-lineGetNext(const line_T line)
-{
-  if (!line) return NULL;
-
-  else if (lineIsHidden(line->rlink)) 
-    return lineGetNext(line->rlink);
-
-  else return line->rlink;
-}
-
-line_T
-lineGetPrev(const line_T line)
-{
-  if (!line) return NULL;
-
-  else if (lineIsHidden(line->llink)) 
-    return lineGetPrev(line->llink);
-
-  else return line->llink;
 }

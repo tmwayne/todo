@@ -75,34 +75,42 @@ viewListScreen(const screen_T screen, const list_T list)
   clear();
   
   // TODO: need to check line count
-  // TODO: add ability to hide lines
 
   int row = 0;
 
-  line_T first_line = screenGetFirstLine(screen);
-  line_T line = first_line;
+  line_T line;
+  char *val;
+  int level;
+  int type;
 
-  for (line_T line=first_line; line; line=lineGetNext(line)) {
-    char *val;
-    int level = lineLevel(line);
-    if (level < 0) 
-      errExit("Failed to render list screen: indent level less than 0");
-    int type = lineType(line);
-    switch (type) {
-    case LT_STR:
-      val = (char *) lineObj(line);
-      break;
+  for (int i=0; i < screen->nlines; i++) {
 
-    case LT_CAT:
-      val = catName((cat_T) lineObj(line));
-      break;
+    line = screenGetLine(screen, i);
 
-    case LT_TASK:
-      val = taskGet((task_T) lineObj(line), "name");
-      break;
+    // Line is a blank line
+    if (line == NULL) {
+      type = LT_BLANK;
+      val = "";
+      level = 0;
+    }
 
-    default: // ignore unrecognized types
-      break;
+    else {
+      level = lineLevel(line);
+      if (level < 0) 
+        errExit("Failed to render list screen: indent level less than 0");
+      type = lineType(line);
+      switch (type) {
+      case LT_CAT:
+        val = catName((cat_T) lineObj(line));
+        break;
+
+      case LT_TASK:
+        val = taskGet((task_T) lineObj(line), "name");
+        break;
+
+      default: // ignore unrecognized types
+        break;
+      }
     }
 
     move(row, 0);
@@ -173,54 +181,51 @@ viewHelpScreen()
 }
 
 // TODO: rerender if at end of window but screen isn't exhausted
-static int
-moveDown(const screen_T screen, line_T *line)
+static line_T
+moveDown(const screen_T screen)
 {
   int cur_row, cur_col, max_row, max_col;
 
   getyx(stdscr, cur_row, cur_col);
   getmaxyx(stdscr, max_row, max_col);
 
-  line_T next = lineGetNext(*line);
-
-  if (cur_row < max_row && next) {
-    move(cur_row+1, cur_col);
-    *line = next;
+  // TODO: check and account for offset
+  if (cur_row < max_row && cur_row < screen->nlines-1) {
+    cur_row++;
+    move(cur_row, cur_col);
   }
 
-  return TD_OK;
+  return screenGetLine(screen, cur_row);
 }
     
-static int
-moveUp(const screen_T screen, line_T *line)
+static line_T
+moveUp(const screen_T screen)
 {
-  int cur_row, cur_col, max_row, max_col;
+  int cur_row, cur_col;
 
   getyx(stdscr, cur_row, cur_col);
-  getmaxyx(stdscr, max_row, max_col);
 
-  line_T prev = lineGetPrev(*line);
-
-  if (cur_row > 0 && prev) {
-    move(cur_row-1, cur_col);
-    *line = prev;
+  // TODO: check and account for offset
+  if (cur_row > 0) {
+    cur_row--;
+    move(cur_row, cur_col);
   }
 
-  return TD_OK;
+  return screenGetLine(screen, cur_row);
 }
 
 #define clearStatusLine() do { \
   move(max_row-1, 0);          \
   clrtoeol();                  \
   move(cur_row, cur_col);      \
-} while (0);
+} while (0)
 
 #define statusMessage(str) do { \
   move(status_row, 0);          \
   clrtoeol();                   \
   addstr((str));                \
   refresh();                    \
-} while (0);
+} while (0)
 
 
 static void 
@@ -233,15 +238,14 @@ eventLoop(list_T list, const char *filename)
 
   screenInitialize(screen, list);
   viewListScreen(screen, list);
-  line_T line = screenGetFirstLine(screen);
+  line_T line = screenGetLine(screen, 0);
 
   move(0, 0);
   refresh();
 
-  char c, answer;
+  char c;
   int rc;
   int cur_row, cur_col, max_row, max_col; 
-  int save_row, save_col;
   int status_row;
   bool redraw = false;
   while ((c = getch())) {
@@ -252,8 +256,11 @@ eventLoop(list_T list, const char *filename)
 
     clearStatusLine();
 
-    // TODO: check return codes of backend (write) functions
     switch (c) {
+
+    // TODO: whenever we get input, we could receive a KEY_RESIZE. handle it
+    // TODO: add command to fold categories
+    // TODO: create an undo option (this will require substantial work)
 
     case 'a': // Add task
       if (lineType(line) == LT_CAT || lineType(line) == LT_TASK) {
@@ -264,7 +271,6 @@ eventLoop(list_T list, const char *filename)
     
     case 'e': // Edit task
       if (lineType(line) == LT_TASK) {
-        // getyx(stdscr, save_row, save_col);
         if (editTask(list, (task_T) lineObj(line)) == ET_MOD)
           redraw = true;
       }
@@ -275,23 +281,21 @@ eventLoop(list_T list, const char *filename)
       break;
 
     case 'j': // Move cursor down
-      moveDown(screen, &line);
+      line = moveDown(screen);
       break;
 
     case 'k': // Move cursor up
-      moveUp(screen, &line);
+      line = moveUp(screen);
       break;
 
     case 'q': // Quit
       if (listNumUpdates(list) == 0) return;
-      // TODO: prompt to create backend if it doesn't exist
       else if (filename) {
-        getyx(stdscr, save_row, save_col);
         statusMessage("Save changes before quitting? (y/n) ");
         if (getch() != 'y') return;
 
         int has_backend = 1;
-        int rc = backendCheck(list, filename);
+        rc = backendCheck(list, filename);
         if (rc == BE_DBNOTEXIST || rc == BE_TBLNOTEXIST) {
           has_backend = 0;
           statusMessage("Initialize backend? (y/n) ");
@@ -303,24 +307,26 @@ eventLoop(list_T list, const char *filename)
 
         statusMessage("Unable to save changes. Quit anyway? (y/n) ");
         if (getch() == 'y') return;
-        else move(save_row, save_col);
+        else move(cur_row, cur_col);
       }
       break;
             
     case 's': // Save changes
-      getyx(stdscr, save_row, save_col);
       if (listNumUpdates(list) == 0) {
         statusMessage("No updates to save.");
-        move(save_row, save_col);
+        move(cur_row, cur_col);
         break;
       }
 
       if (filename) {
-        // TODO: check if filename is NULL
         rc = backendCheck(list, filename);
         if (rc == BE_DBNOTEXIST || rc == BE_TBLNOTEXIST) {
           statusMessage("Initialize backend? (y/n) ");
-          if (getch() == 'y') backendCreate(list, filename);
+          if (getch() == 'y') 
+            if (backendCreate(list, filename) != TD_OK) {
+              statusMessage("Unable to create backend.");
+              break;
+            }
           else {
             statusMessage("Changes not saved to backend.");
             break;
@@ -328,22 +334,17 @@ eventLoop(list_T list, const char *filename)
         }
 
         statusMessage("Save changes? (y/n) ");
-        if (getch() == 'y') {
-          writeUpdates(list, filename);
+        if (getch() == 'y' && writeUpdates(list, filename) == TD_OK)
           statusMessage("Changes successfully saved to backend.");
-        } else
+        else
           statusMessage("Changes not saved to backend.");
 
-        move(save_row, save_col);
+        move(cur_row, cur_col);
       }
       break;
 
-    // TODO: create an undo option (this will require substantial work)
-
     case 'v': // View task
       if (lineType(line) == LT_TASK) {
-        getyx(stdscr, save_row, save_col);
-        
         viewTaskScreen(list, (task_T) lineObj(line));
         redraw = true;
       }
@@ -351,17 +352,13 @@ eventLoop(list_T list, const char *filename)
 
     case 'x': // Mark task as complete
       if (lineType(line) == LT_TASK) {
-        getyx(stdscr, save_row, save_col);
         task = (task_T) lineObj(line);
         statusMessage("Mark as complete? (y/n) ");
-        answer = getch();
-        if (answer != 'y') {
-          statusMessage("Task left unchanged.");
-        } else do {
+        if (getch() != 'y') statusMessage("Task left unchanged.");
+        else do {
             if (taskGetSubtask(task)) {
               statusMessage("Mark all subtasks as complete? (y/n) ");
-              answer = getch();
-              if (answer != 'y') {
+              if (getch() != 'y') {
                 statusMessage("Task left unchanged.");
                 break;
               }
@@ -370,7 +367,7 @@ eventLoop(list_T list, const char *filename)
             if (markComplete(list, task) == TD_OK) redraw = true;
             else statusMessage("Unable to mark as complete.");
         } while (0);
-        move(save_row, save_col);
+        move(cur_row, cur_col);
       }
       break;
 
@@ -382,8 +379,8 @@ eventLoop(list_T list, const char *filename)
     if (redraw) {
       screenReset(&screen, list);
       viewListScreen(screen, list);
-      line = screenGetFirstLine(screen);
-      move(0, 0);
+      line = screenGetLine(screen, cur_row);
+      move(cur_row, cur_col);
       redraw = false;
     }
 
@@ -396,8 +393,6 @@ endwinAtExit()
   endwin();
 }
 
-// TODO: make this work even if filename isn't set.
-// the todo list would be only temporary and never saved to disk
 void
 view(list_T list, const char *filename)
 {
