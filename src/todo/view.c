@@ -69,6 +69,7 @@ viewTaskScreen(list_T list, task_T task)
   } while (1);
 }
 
+// TODO: some tasks seem to be hidden. screen might be not initializing correctly
 static void
 viewListScreen(const screen_T screen, const list_T list)
 {

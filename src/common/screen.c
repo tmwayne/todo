@@ -94,9 +94,7 @@ screenAddTasks(screen_T screen, const task_T task, const int level, int lineno)
   }
 
   lineno = screenAddTasks(screen, taskGetSubtask(task), level+1, lineno); 
-  lineno = screenAddTasks(screen, taskGetNext(task), level, lineno); 
-
-  return lineno;
+  return screenAddTasks(screen, taskGetNext(task), level, lineno); 
 }
 
 
@@ -116,7 +114,11 @@ screenInitialize(screen_T screen, const list_T list)
     // Increment once to bring it to the current line
     // and a second time to add a blank line
     lineno = screenAddTasks(screen, task, 1, lineno) + 2;
+    screen->nlines++; // Blank line
   }
+
+  // Remove the trailing blank line
+  screen->nlines--;
 
   return TD_OK;
 }
@@ -124,13 +126,9 @@ screenInitialize(screen_T screen, const list_T list)
 int
 screenReset(screen_T *screen, const list_T list)
 {
-  screenFree(screen);
-  screen_T new = screenNew();
-
-  screenInitialize(new, list);
-  *screen = new;
-
-  return TD_OK;
+  if (screen && *screen) screenFree(screen);
+  *screen = screenNew();
+  return screenInitialize(*screen, list);
 }
 
 line_T
