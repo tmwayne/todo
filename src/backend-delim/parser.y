@@ -58,23 +58,24 @@ char *val;
 %%
 
 input:
-  record EOL            { if (scanner.headers) dataframeSetHeaders(data, record);
+  record                { if (scanner.headers) dataframeSetHeaders(data, record);
                           else                 dataframePush(data, record);
                           record = NULL; }
 
-  | input record EOL    { if(dataframePush(data, record) != DF_OK) YYERROR;
+  | input EOL record    { if(dataframePush(data, record) != DF_OK) YYERROR;
                           record = NULL; }
   ;
 
-record:
-  field                 { if (!record) record = recordNew();
+record: 
+  /* blank line */
+  | field               { if (!record) record = recordNew();
                           recordPush(record, $1); }
 
   | record SEP field    { recordPush(record, $3); }
   ;
 
 field:
-  /* nothing */         { $$ = ""; }
+  /* empty field */     { $$ = ""; }
   | FIELD               { $$ = $1; }
   ;
 
