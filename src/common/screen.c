@@ -123,11 +123,21 @@ screenInitialize(screen_T screen, const list_T list)
   return TD_OK;
 }
 
+// TODO: this is not an efficient way to update the screen.
+// Is there a better way?
 int
 screenReset(screen_T *screen, const list_T list)
 {
-  if (screen && *screen) screenFree(screen);
+  int offset = 0; // save the offset
+
+  if (screen && *screen) {
+    offset = (*screen)->offset;
+    screenFree(screen);
+  }
+
   *screen = screenNew();
+  (*screen)->offset = offset;
+  
   return screenInitialize(*screen, list);
 }
 

@@ -34,8 +34,6 @@
 #include "view.h"
 #include "screen.h"
 
-// TODO: fix cursor so it doesn't reset everytime
-// TODO: enable vertical movement of the cursor
 static void
 viewTaskScreen(list_T list, task_T task)
 {
@@ -69,24 +67,26 @@ viewTaskScreen(list_T list, task_T task)
   } while (1);
 }
 
-// TODO: some tasks seem to be hidden. screen might be not initializing correctly
 static void
 viewListScreen(const screen_T screen, const list_T list)
 {
   clear();
-  
-  // TODO: need to check line count
 
-  int row = 0;
+  int max_row, max_col;
+  getmaxyx(stdscr, max_row, max_col);
 
-  line_T line;
   char *val;
   int level;
   int type;
 
-  for (int i=0; i < screen->nlines; i++) {
+  int offset = screen->offset;
 
-    line = screenGetLine(screen, i);
+  if (screen->nlines-1 > max_row) 
+    max_row = screen->nlines-1;
+
+  for (int row=0, ind=offset; ind < max_row; row++, ind++) {
+
+    line_T line = screenGetLine(screen, ind);
 
     // Line is a blank line
     if (line == NULL) {
@@ -117,15 +117,13 @@ viewListScreen(const screen_T screen, const list_T list)
     move(row, 0);
     if (type == LT_CAT) addstr("[");
     else {
-      for (int i=level; i>0; i--) 
-        if (i == 1) addstr(". ");
+      for (int j=level; j>0; j--) 
+        if (j == 1) addstr(". ");
         else addstr("  ");
     }
 
     addstr(val);
     if (type == LT_CAT) addstr("]");
-
-    row++;
   }
 }
 
@@ -181,38 +179,47 @@ viewHelpScreen()
   unlink(filename);
 }
 
-// TODO: rerender if at end of window but screen isn't exhausted
-static line_T
-moveDown(const screen_T screen)
+static int
+moveDown(const screen_T screen, line_T *line)
 {
-  int cur_row, cur_col, max_row, max_col;
+  int cur_row, cur_col, max_row, max_col, redraw = 0;
 
   getyx(stdscr, cur_row, cur_col);
   getmaxyx(stdscr, max_row, max_col);
+  max_row--; // don't move to status row
 
-  // TODO: check and account for offset
-  if (cur_row < max_row && cur_row < screen->nlines-1) {
+  int offset = screen->offset;
+
+  if (cur_row == max_row-1 && offset + cur_row < screen->nlines-2) {
+    screen->offset++;
+    redraw = 1;
+  } else if (cur_row < max_row-1 && offset + cur_row < screen->nlines-1) {
     cur_row++;
     move(cur_row, cur_col);
   }
 
-  return screenGetLine(screen, cur_row);
+  *line = screenGetLine(screen, offset + cur_row);
+
+  return redraw;
 }
     
-static line_T
-moveUp(const screen_T screen)
+static int
+moveUp(const screen_T screen, line_T *line)
 {
-  int cur_row, cur_col;
-
+  int cur_row, cur_col, redraw = 0;
   getyx(stdscr, cur_row, cur_col);
 
-  // TODO: check and account for offset
-  if (cur_row > 0) {
+  if (cur_row == 0 && screen->offset > 0) {
+    screen->offset--;
+    redraw = 1;
+  } else if (cur_row > 0) {
     cur_row--;
     move(cur_row, cur_col);
   }
 
-  return screenGetLine(screen, cur_row);
+  *line = screenGetLine(screen, screen->offset + cur_row);
+
+  return redraw;
 }
 
 #define clearStatusLine() do { \
@@ -234,11 +241,19 @@ eventLoop(list_T list, const char *filename)
 {
   if (!list) return;
 
+  // TODO: this is needed here so that we can clear
+  // the status line before the loop. Move to a better place
+  int cur_row = 0, cur_col = 0, max_row, max_col; 
+  getmaxyx(stdscr, max_row, max_col);
+
   screen_T screen = screenNew();
   task_T task;
 
   screenInitialize(screen, list);
   viewListScreen(screen, list);
+  
+  // TODO: should we add status row logic to the view functions?
+  clearStatusLine();
   line_T line = screenGetLine(screen, 0);
 
   move(0, 0);
@@ -246,7 +261,6 @@ eventLoop(list_T list, const char *filename)
 
   char c;
   int rc;
-  int cur_row, cur_col, max_row, max_col; 
   int status_row;
   bool redraw = false;
   while ((c = getch())) {
@@ -254,8 +268,6 @@ eventLoop(list_T list, const char *filename)
     getyx(stdscr, cur_row, cur_col);
     getmaxyx(stdscr, max_row, max_col);
     status_row = max_row - 1;
-
-    clearStatusLine();
 
     switch (c) {
 
@@ -282,11 +294,11 @@ eventLoop(list_T list, const char *filename)
       break;
 
     case 'j': // Move cursor down
-      line = moveDown(screen);
+      redraw = moveDown(screen, &line);
       break;
 
     case 'k': // Move cursor up
-      line = moveUp(screen);
+      redraw = moveUp(screen, &line);
       break;
 
     case 'q': // Quit
@@ -378,8 +390,11 @@ eventLoop(list_T list, const char *filename)
     }
 
     if (redraw) {
+      // TODO: this is an expensive operation. Is there a better way to do this?
       screenReset(&screen, list);
+
       viewListScreen(screen, list);
+      clearStatusLine();
       line = screenGetLine(screen, cur_row);
       move(cur_row, cur_col);
       redraw = false;
@@ -409,4 +424,3 @@ view(list_T list, const char *filename)
 
   eventLoop(list, filename);
 }
-
