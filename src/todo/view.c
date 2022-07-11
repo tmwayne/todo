@@ -340,12 +340,12 @@ eventLoop(list_T list, const char *filename)
         rc = backendCheck(list, filename);
         if (rc == BE_DBNOTEXIST || rc == BE_TBLNOTEXIST) {
           statusMessage("Initialize backend? (y/n) ");
-          if (getch() == 'y') 
+          if (getch() == 'y')  {
             if (backendCreate(list, filename) != TD_OK) {
               statusMessage("Unable to create backend.");
               break;
             }
-          else {
+          } else {
             statusMessage("Changes not saved to backend.");
             break;
           }
