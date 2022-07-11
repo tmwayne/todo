@@ -195,7 +195,9 @@ moveDown(const screen_T screen, line_T *line)
     redraw = 1;
   } else if (cur_row < max_row-1 && offset + cur_row < screen->nlines-1) {
     cur_row++;
+    chgat(-1, A_NORMAL, 0, NULL);
     move(cur_row, cur_col);
+    chgat(-1, A_UNDERLINE, 0, NULL);
   }
 
   *line = screenGetLine(screen, offset + cur_row);
@@ -214,7 +216,9 @@ moveUp(const screen_T screen, line_T *line)
     redraw = 1;
   } else if (cur_row > 0) {
     cur_row--;
+    chgat(-1, A_NORMAL, 0, NULL);
     move(cur_row, cur_col);
+    chgat(-1, A_UNDERLINE, 0, NULL);
   }
 
   *line = screenGetLine(screen, screen->offset + cur_row);
@@ -257,6 +261,7 @@ eventLoop(list_T list, const char *filename)
   line_T line = screenGetLine(screen, 0);
 
   move(0, 0);
+  chgat(-1, A_UNDERLINE, 0, NULL);
   refresh();
 
   char c;
@@ -391,12 +396,14 @@ eventLoop(list_T list, const char *filename)
 
     if (redraw) {
       // TODO: this is an expensive operation. Is there a better way to do this?
+      // TODO: only reset screen if an edit operation was made
       screenReset(&screen, list);
 
       viewListScreen(screen, list);
       clearStatusLine();
       line = screenGetLine(screen, cur_row);
       move(cur_row, cur_col);
+      chgat(-1, A_UNDERLINE, 0, NULL);
       redraw = false;
     }
 
@@ -421,6 +428,7 @@ view(list_T list, const char *filename)
   initscr();
   cbreak();
   noecho();
+  curs_set(0);
 
   eventLoop(list, filename);
 }
