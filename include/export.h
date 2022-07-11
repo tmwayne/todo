@@ -1,6 +1,6 @@
 //
 // -----------------------------------------------------------------------------
-// dump.h
+// export.h
 // -----------------------------------------------------------------------------
 //
 // Copyright (c) 2022 Tyler Wayne
@@ -18,9 +18,9 @@
 // limitations under the License.
 //
 
-#ifndef TD_DUMP_INCLUDED
-#define TD_DUMP_INCLUDED
+#ifndef TD_EXPORT_INCLUDED
+#define TD_EXPORT_INCLUDED
 
-extern void dumpTasks(char *listname, const char *filename);
+extern void exportTasks(char *listname, const char *filename);
 
-#endif // TD_DUMP_INCLUDED
+#endif // TD_EXPORT_INCLUDED

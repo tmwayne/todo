@@ -1,6 +1,6 @@
 //
 // -----------------------------------------------------------------------------
-// dump.c
+// export.c
 // -----------------------------------------------------------------------------
 //
 // Copyright (c) 2022 Tyler Wayne
@@ -26,7 +26,7 @@
 #define MAX_SQL_LEN 2048
 
 void
-dumpTasks(char *listname, const char *filename)
+exportTasks(char *listname, const char *filename)
 {
   // TODO: what error handling do we want here?
   if (!(listname && filename)) return;
@@ -38,15 +38,15 @@ dumpTasks(char *listname, const char *filename)
     filename, listname);
 
   if (size >= MAX_SQL_LEN)
-    errExit("Failed to dump tasks: invalid list or filename");
+    errExit("Failed to export tasks: invalid list or filename");
 
   int status = system(command);
   if (status == -1)
-    sysErrExit("Failed to dump tasks: sqlite3 process could not be created");
+    sysErrExit("Failed to export tasks: sqlite3 process could not be created");
 
   else if (WIFEXITED(status) && WEXITSTATUS(status) == 127)
-    errExit("Failed to dump tasks: Editor returned 127, likely unable to invoke shell");
+    errExit("Failed to export tasks: Editor returned 127, likely unable to invoke shell");
 
   else if (WEXITSTATUS(status) > 128)
-    errExit("Failed to dump tasks: sqlite3 returned an error");
+    errExit("Failed to export tasks: sqlite3 returned an error");
 }

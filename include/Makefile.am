@@ -4,11 +4,12 @@ noinst_HEADERS = backend-sqlite3.h \
 	dataframe.h \
 	delim-reader.h \
 	dict.h \
-	return-codes.h \
 	error-functions.h \
+	export.h \
 	help.inc \
 	list.h \
 	minunit.h \
+	return-codes.h \
 	screen.h \
 	task.h \
 	view.h

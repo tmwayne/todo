@@ -1,6 +1,6 @@
 bin_PROGRAMS = todo
-todo_SOURCES = dump.c \
-	edit.c \
+todo_SOURCES = edit.c \
+	export.c \
 	import.c \
 	todo.c \
 	view.c

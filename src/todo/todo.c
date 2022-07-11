@@ -29,7 +29,7 @@
 #include "task.h"            // task_T
 #include "view.h"            // view
 #include "import.h"          // import
-#include "dump.h"            // dumpTasks
+#include "export.h"          // exportTasks
 #include "backend-sqlite3.h" // createBackend
 
 const char *USAGE = "Usage: %s [OPTIONS...] COMMAND\n";
@@ -57,7 +57,7 @@ Options:                                                    \n\
                                                             \n\
 Commands:                                                   \n\
   create    Create a new todo list                          \n\
-  dump      Dump todo list to stdout in tabular form        \n\
+  export    Export todo list to stdout in tabular form      \n\
   import    Import tasks from delimited file                \n\
   view      View todo lists and make edits. (default)       \n\
                                                             \n\
@@ -178,8 +178,8 @@ main(int argc, char **argv)
 
   // TODO: add merge existing
 
-  else if (is_arg("dump"))
-    dumpTasks(listname, filename);
+  else if (is_arg("export"))
+    exportTasks(listname, filename);
 
   else if (is_arg("import")) {
     optind++;
