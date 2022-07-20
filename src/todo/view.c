@@ -34,6 +34,7 @@
 #include "view.h"
 #include "screen.h"
 
+// TODO: fix line wrapping
 static void
 viewTaskScreen(list_T list, task_T task)
 {
@@ -67,6 +68,7 @@ viewTaskScreen(list_T list, task_T task)
   } while (1);
 }
 
+// TODO: add filtering logic/command
 static void
 viewListScreen(const screen_T screen, const list_T list)
 {
@@ -75,9 +77,10 @@ viewListScreen(const screen_T screen, const list_T list)
   int max_row, max_col;
   getmaxyx(stdscr, max_row, max_col);
 
-  char *val;
   int level;
   int type;
+  cat_T cat;
+  task_T task;
 
   int offset = screen->offset;
 
@@ -89,41 +92,38 @@ viewListScreen(const screen_T screen, const list_T list)
     line_T line = screenGetLine(screen, ind);
 
     // Line is a blank line
-    if (line == NULL) {
-      type = LT_BLANK;
-      val = "";
-      level = 0;
-    }
+    if (line == NULL) continue;
 
     else {
       level = lineLevel(line);
       if (level < 0) 
         errExit("Failed to render list screen: indent level less than 0");
       type = lineType(line);
+
+      move(row, 0);
+
       switch (type) {
       case LT_CAT:
-        val = catName((cat_T) lineObj(line));
+        addstr("[");
+        cat = (cat_T) lineObj(line);
+        addstr(catName(cat));
+        addstr("]");
         break;
 
       case LT_TASK:
-        val = taskGet((task_T) lineObj(line), "name");
+        for (int j=level; j>0; j--) {
+          if (j == 1) addstr(". ");
+          else addstr("  ");
+        }
+        task = (task_T) lineObj(line);
+        addstr(taskGet(task, "name"));
+        mvaddstr(row, max_col - 3, taskGet(task, "timing"));
         break;
 
       default: // ignore unrecognized types
         break;
       }
     }
-
-    move(row, 0);
-    if (type == LT_CAT) addstr("[");
-    else {
-      for (int j=level; j>0; j--) 
-        if (j == 1) addstr(". ");
-        else addstr("  ");
-    }
-
-    addstr(val);
-    if (type == LT_CAT) addstr("]");
   }
 }
 

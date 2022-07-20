@@ -32,6 +32,7 @@ static char *required_keys[] = {
   "category",
   "name",
   "status",
+  "timing", // TODO: remove this
   NULL
 };
 
