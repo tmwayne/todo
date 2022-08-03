@@ -53,7 +53,7 @@ viewTaskScreen(list_T list, task_T task)
     mvaddstr(row++, 0, (key) ); \
     addstr(": ");               \
     addstr((val));              \
-  } while (0);
+  } while (0)
 
     for (int i=0; i < taskSize(task); i++)
       ADDVAL(taskKeyInd(task, i), BLANKIFNULL(taskValInd(task, i)));
@@ -279,6 +279,7 @@ eventLoop(list_T list, const char *filename)
     // TODO: whenever we get input, we could receive a KEY_RESIZE. handle it
     // TODO: add command to fold categories
     // TODO: create an undo option (this will require substantial work)
+    // TODO: add a command for long options ':'
 
     case 'a': // Add task
       if (lineType(line) == LT_CAT || lineType(line) == LT_TASK) {
@@ -286,6 +287,8 @@ eventLoop(list_T list, const char *filename)
         redraw = true;
       }
       break;
+
+    // TODO: add delete task
     
     case 'e': // Edit task
       if (lineType(line) == LT_TASK) {

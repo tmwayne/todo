@@ -22,6 +22,7 @@
 #include <stdlib.h>          // NULL
 #include <string.h>          // strlen, strcasecmp, strncpy
 #include <stdbool.h>         // false
+#include <ctype.h>           // isalpha, isalnum
 #include <sqlite3.h>
 #include "task.h"
 #include "list.h"
@@ -35,13 +36,30 @@
 #define sqlErr(fmt, ...) do {               \
     sqlite3_close(db);                      \
     errExit(fmt, ##__VA_ARGS__); \
-  } while (0);
+  } while (0)
 #endif
 
 // TODO: is there a non-arbitrary magic number we can use?
 #define MAX_SQL_LEN 2048
 
 // TODO: make sure there is error detection for all sqlite3 calls
+
+static int
+isValidTableName(const char *tableName)
+{
+  if (!tableName) return BE_ETBLNMINVALID;
+  
+  char c = *tableName++;
+
+  // Can only start with [_a-zA-Z]
+  if (!(isalpha(c) || c == '_')) return BE_ETBLNMINVALID;
+
+  // Can only include [_0-9a-zA-Z]
+  while ((c = *tableName++)) 
+    if (!(isalnum(c) || c == '_')) return BE_ETBLNMINVALID;
+
+  return TD_OK;
+}
 
 // -----------------------------------------------------------------------------
 // Template
@@ -55,11 +73,12 @@ runSQL(const char *filename, list_T list, task_T task,
 {
   if (!list) return TD_INVALIDARG;
 
+  int rc = isValidTableName(listName(list));
+  if (rc != TD_OK) return rc;
+
   sqlite3 *db;
   sqlite3_stmt *stmt;
-  int rc;
 
-  // TODO: need to guard against SQL injection here
   char sql[MAX_SQL_LEN];
   
   if (genSQL(list, task, sql, MAX_SQL_LEN) != TD_OK)
@@ -74,7 +93,6 @@ runSQL(const char *filename, list_T list, task_T task,
 
   if (rc != SQLITE_OK) 
     return BE_DBNOTEXIST;
-    // sqlErr("Can't open database: %s", sqlite3_errmsg(db));
 
   rc = sqlite3_prepare_v2(
     db,                    // db handle
@@ -121,6 +139,7 @@ processNoResultSQL(sqlite3_stmt *stmt, sqlite3 *db, list_T list, task_T task)
 static int
 genReadSQL(const list_T list, const task_T unused, char *buf, const size_t len)
 {
+
   if (snprintf(buf, len, "select * from %s", listName(list)) >= len)
     return TD_BUFOVERFLOW;
 
@@ -202,10 +221,8 @@ genUpdateSQL(const list_T list, const task_T task, char *buf, const size_t len)
 {
   if (!(buf && len)) return TD_INVALIDARG;
 
-  // elem_T elem;
   char tmp[len];
 
-  // TODO: need to guard against SQL injection in the list name
   char *text = "update %s set ";
   snprintf(buf, len, text, listName(list));
 
@@ -220,7 +237,6 @@ genUpdateSQL(const list_T list, const task_T task, char *buf, const size_t len)
   int i;
   for (i=0; i < taskSize(task); i++) {
   
-    // elem = taskElemInd(task, i);
     key = elemKey(taskElemInd(task, i));
     if (strcmp(key, "id") == 0) continue;
 
@@ -287,7 +303,6 @@ genInsertSQL(const list_T list, const task_T task, char *buf, const size_t len)
   elem_T elem;
   char tmp[len];
 
-  // TODO: need to guard against SQL injection in the list name
   char *text = "insert into %s (";
   snprintf(buf, len, text, listName(list));
 
@@ -382,7 +397,6 @@ genCreateSQL(const list_T list, const task_T unused, char *buf, const size_t len
   elem_T elem;
   char tmp[len];
 
-  // TODO: guard against SQL injection in the list name
   char *text ="create table %s (";
   // snprintf will ensure there is a null-terminating byte with this len
   snprintf(buf, len, text, listName(list));

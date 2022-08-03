@@ -24,6 +24,7 @@
 #include <getopt.h>          // getopt_long
 #include <wordexp.h>         // wordexp_t, wordexp, wordfree
 #include "error-functions.h" // usageErr
+#include "return-codes.h"    // TD_OK
 #include "dict.h"            // dict_T, dictNew, dictSet, dictSet, dictFree
 #include "config-reader.h"   // readConfig
 #include "task.h"            // task_T
@@ -171,8 +172,22 @@ main(int argc, char **argv)
   list_T list = listNew(listname);
 
   if (optind == argc || is_arg("view")) {
-    // TODO: Check the return code of readTasks
-    readTasks(list, filename);
+    int rc = readTasks(list, filename);
+      switch (rc) {
+      case TD_OK:
+        break;
+
+      case BE_ETBLNMINVALID:
+        errExit("Invalid sqlite3 table name");
+
+      case BE_DBNOTEXIST:
+        errExit("Unable to locate todo backend file");
+
+      // TODO: handle the case where the list (table) isn't found
+
+      default:
+        errExit("Unable to read tasks");
+      }
     view(list, filename);
   }
 
