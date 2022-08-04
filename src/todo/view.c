@@ -288,7 +288,26 @@ eventLoop(list_T list, const char *filename)
       }
       break;
 
-    // TODO: add delete task
+    case 'd': // Delete task
+      if (lineType(line) == LT_TASK) {
+        task = (task_T) lineObj(line);
+        statusMessage("Delete task (y/n) ");
+        if (getch() != 'y') statusMessage("Task left unchanged.");
+        else do {
+            if (taskGetSubtask(task)) {
+              statusMessage("Delete all subtasks? (y/n) ");
+              if (getch() != 'y') {
+                statusMessage("Task left unchanged.");
+                break;
+              }
+            }
+
+            if (markDelete(list, task) == TD_OK) redraw = true;
+            else statusMessage("Unable to delete task.");
+        } while (0);
+        move(cur_row, cur_col);
+      }
+      break;
     
     case 'e': // Edit task
       if (lineType(line) == LT_TASK) {

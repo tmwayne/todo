@@ -445,6 +445,7 @@ listClearUpdates(list_T list)
   return TD_OK;
 }
 
+// TODO: combine the logic of markComplete and markDelete
 int 
 markComplete(list_T list, task_T task)
 {
@@ -454,11 +455,40 @@ markComplete(list_T list, task_T task)
 
   int stop = task->level;
   do {
-    taskSet(task, "status", "Complete");
-    list->nupdates += !(task->flags & TF_UPDATE);
-    if (!taskGetFlag(task, TF_COMPLETE)) 
+    if (!taskGetFlag(task, TF_DELETE)) {
+
+      taskSet(task, "status", "Complete");
+      list->nupdates += !(task->flags & TF_UPDATE);
+      if (!taskGetFlag(task, TF_COMPLETE)) 
+        cat->nopen--;
+      taskSetFlag(task, TF_UPDATE | TF_COMPLETE);
+
+    }
+    task = catGetTask(NULL, task);
+  } while (task && task->level > stop);
+
+  return TD_OK;
+}
+
+int 
+markDelete(list_T list, task_T task)
+{
+  if (!task) return TD_INVALIDARG;
+  cat_T cat = getCategory(list, taskGet(task, "category"));
+  if (!cat) return -1; // TODO: return error code
+
+  int stop = task->level;
+  do {
+    if (!(taskGetFlag(task, TF_DELETE) || taskGetFlag(task, TF_COMPLETE)))
       cat->nopen--;
-    taskSetFlag(task, TF_UPDATE | TF_COMPLETE);
+
+    if (taskGetFlag(task, TF_NEW)) {
+      taskUnsetFlag(task, TF_NEW);
+      list->nupdates--;
+    } else 
+      list->nupdates += !(task->flags & TF_UPDATE);
+
+    taskSetFlag(task, TF_UPDATE | TF_DELETE);
     task = catGetTask(NULL, task);
   } while (task && task->level > stop);
 

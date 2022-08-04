@@ -202,14 +202,26 @@ taskSwap(task_T old, task_T new)
   return TD_OK;
 }
 
+static int
+hasInvalidFlag(const int flags)
+{
+  return flags & ~(TF_NEW | TF_UPDATE | TF_COMPLETE | TF_DELETE);
+}
+
+
 int
 taskSetFlag(task_T task, const int flags)
 {
-  int check = flags & ~(TF_NEW | TF_UPDATE | TF_COMPLETE);
-  if (check) return TD_INVALIDARG;
-
+  if (hasInvalidFlag(flags)) return TD_INVALIDARG;
   task->flags |= flags;
+  return TD_OK;
+}
 
+int
+taskUnsetFlag(task_T task, const int flags)
+{
+  if (hasInvalidFlag(flags)) return TD_INVALIDARG;
+  task->flags &= ~flags;
   return TD_OK;
 }
 

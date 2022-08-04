@@ -85,10 +85,11 @@ screenAddLine(screen_T screen, const int type, void *obj, const int level, const
 static int
 screenAddTasks(screen_T screen, const task_T task, const int level, int lineno)
 {
-  // Skip NULL tasks or completed tasks
+  // Skip NULL, completed, or deleted tasks
   if (!task) return lineno; 
 
-  if (strcasecmp(taskGet(task, "status"), "Complete") != 0) {
+  if (strcasecmp(taskGet(task, "status"), "Complete") != 0 &&
+      !taskGetFlag(task, TF_DELETE)) {
     lineno++;
     screenAddLine(screen, LT_TASK, task, level, lineno);
   }

@@ -139,7 +139,6 @@ processNoResultSQL(sqlite3_stmt *stmt, sqlite3 *db, list_T list, task_T task)
 static int
 genReadSQL(const list_T list, const task_T unused, char *buf, const size_t len)
 {
-
   if (snprintf(buf, len, "select * from %s", listName(list)) >= len)
     return TD_BUFOVERFLOW;
 
@@ -363,6 +362,35 @@ writeNewTask(list_T list, task_T task, const char *filename)
     genInsertSQL, bindInsertSQL, processNoResultSQL);
 }
 
+// -----------------------------------------------------------------------------
+// Delete
+// -----------------------------------------------------------------------------
+
+static int
+genDeleteSQL(const list_T list, const task_T unused, char *buf, const size_t len)
+{
+  if (snprintf(buf, len, "delete from %s where id = ?", listName(list)) >= len)
+    return TD_BUFOVERFLOW;
+
+  return TD_OK;
+}
+
+static int
+bindDeleteSQL(sqlite3_stmt *stmt, sqlite3 *db, const list_T list, const task_T task)
+{
+  if (sqlite3_bind_text(stmt, 1, taskGet(task, "id"), -1, SQLITE_STATIC) != SQLITE_OK)
+    return BE_ESQLBIND;
+
+  return TD_OK;
+}
+
+static int
+deleteTask(list_T list, task_T task, const char *filename)
+{
+  return runSQL(filename, list, task, 
+    genDeleteSQL, bindDeleteSQL, processNoResultSQL);
+}
+
 int
 writeUpdates(list_T list, const char *filename)
 {
@@ -374,7 +402,9 @@ writeUpdates(list_T list, const char *filename)
   // TODO: if there is an error, this will do a partial write.
   // See if we can rollback if there's an error.
   for (int i=0; updates[i]; i++) {
+    // TODO: check return code for each of these operations
     if (taskGetFlag(updates[i], TF_NEW)) writeNewTask(list, updates[i], filename);
+    else if (taskGetFlag(updates[i], TF_DELETE)) deleteTask(list, updates[i], filename);
     else updateTask(list, updates[i], filename);
   }
 
@@ -383,7 +413,6 @@ writeUpdates(list_T list, const char *filename)
 
   return TD_OK;
 }
-
 
 // -----------------------------------------------------------------------------
 // Create

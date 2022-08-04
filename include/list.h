@@ -87,6 +87,8 @@ extern int     listClearUpdates(list_T list);
 extern void    listFree(list_T *);
 extern int     listGetMaxId(const list_T);
 
+// TODO: can we combine these two functions?
 extern int     markComplete(list_T, task_T);
+extern int     markDelete(list_T, task_T);
 
 #endif // LIST_INCLUDED

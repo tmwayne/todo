@@ -28,7 +28,8 @@
 enum taskFlags {
   TF_NEW      = 1,
   TF_UPDATE   = 2,
-  TF_COMPLETE = 4
+  TF_COMPLETE = 4,
+  TF_DELETE   = 8
 };
 
 struct elem_T {
@@ -74,6 +75,7 @@ extern task_T  taskGetSubtask(const task_T);
 extern task_T  taskGetNext(const task_T);
 
 extern int     taskSetFlag(task_T, const int flags);
+extern int     taskUnsetFlag(task_T, const int flags);
 extern int     taskGetFlag(const task_T, const int flag);
 
 extern int     taskSetLevel(task_T, const int level);
